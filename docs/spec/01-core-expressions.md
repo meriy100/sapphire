@@ -176,7 +176,13 @@ be implementable by algorithm W (or J) without surprises.
 4. **Numeric tower.** Stay with a single `Int` at this layer, and decide
    later whether to add `Float` as a separate type or introduce a unified
    `Number`. This document assumes the former is at least possible.
+   *Partially closed by document 05*: at the M5 layer the numeric tower
+   is `Int` only; the `Float` vs. unified `number` choice is re-posed
+   as 05 OQ 1.
 5. **Built-in operators.** Are arithmetic and comparison operators primitive
    constants with fixed monomorphic types in a prelude, or are they resolved
    through a later ad-hoc / type-class-like mechanism? The motivating
    examples use `+` and `>` but this document does not yet assign them types.
+   *Closed by document 05*: operators are prelude-bound primitives with
+   fixed monomorphic types; document 05 fixes the table. Extending
+   equality / ordering beyond `Int` is re-posed as 05 OQ 2.

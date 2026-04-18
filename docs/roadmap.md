@@ -28,6 +28,11 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   01 未解決の問い 1（`let` 自己参照）は本文書で「暗黙再帰」として決着。
 - **M2 レコード (04 Records)** — draft 済み (`docs/spec/04-records.md`)。
   クローズドな構造的レコードを draft の第一候補として採用。行多相は OQ。
+- **M5 演算子と数値 (05 Operators and numbers)** — draft 済み
+  (`docs/spec/05-operators-and-numbers.md`)。Elm 風固定演算子表、単項
+  マイナスは `negate` の糖衣、`Int` のみの数値タワー、`::` はリスト
+  cons として予約。01 OQ5、02 OQ2/3 は決着、01 OQ4 および 02 OQ6 は
+  部分的に決着（残余は 05 OQ1/2、M3 に継承）。
 
 ## マイルストーン
 

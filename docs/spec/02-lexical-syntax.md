@@ -290,10 +290,14 @@ For convenience, the tokens referenced by document 01 resolve as:
    `negate x` / `(0 - x)`? The former is friendlier but forces `-` to
    be both a unary and a binary operator with a specified
    interaction; the latter is simpler to specify.
+   *Closed by document 05*: unary `-` is admitted as surface sugar
+   for `negate` in expression-start position.
 3. **Operator table.** Fixed precedence / associativity levels baked
    into the language (Elm-style), or user-declarable fixity
    (Haskell-style `infixl N`)? This interacts with how ad-hoc
    overloading lands in a later document.
+   *Closed by document 05*: fixed Elm-style table. User-declarable
+   fixity is re-posed as 05 OQ 3.
 4. **Tabs in layout positions.** Treating tabs in leading
    indentation as a lexical error is strict but unambiguous; the
    alternative is to fix a tab stop. Strict-by-default is the
@@ -306,3 +310,6 @@ For convenience, the tokens referenced by document 01 resolve as:
 6. **`::` disambiguation.** Which of list cons and pattern-level
    type annotation wins `::`? If both are wanted, the other needs a
    different spelling.
+   *Partially closed by document 05*: `::` is list cons. The
+   spelling of pattern-level type annotation, if introduced at all,
+   remains open and is to be fixed in M3.
