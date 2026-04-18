@@ -1,2 +1,6 @@
 /target
-.sapphire/
+/.sapphire/
+/.bundle/
+/vendor/bundle/
+.devcontainer/.env
+.claude/settings.local.json
