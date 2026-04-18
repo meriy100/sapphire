@@ -28,6 +28,14 @@ status bumps, `CLAUDE.md` rule revisions, and potentially the
 deletion of OQs that are being deferred to implementation time
 rather than resolved here.
 
+**Ongoing OQ tracking lives in `docs/open-questions.md`** — a
+living document that absorbs OQs from `docs/spec/` 01–12 (this
+document's audit table), from `docs/build/` (the B1 track), and
+from `docs/tutorial/` `仕様への気付き` sections (the T1 track).
+The table below is the initial population; the living document
+is the ongoing record, and this document is frozen as a snapshot
+of the M10 review.
+
 ## Document status summary
 
 | Doc | Scope                                   | Status | Notes |

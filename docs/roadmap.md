@@ -15,6 +15,11 @@ writing conventions 参照）。
 note であり、`CLAUDE.md` writing conventions の dual-language 対象外
 である（日本語のみ）。
 
+未決定仕様の一覧と処理方針は `docs/open-questions.md`（living
+document）で集中管理する。本 roadmap は「今どこまで draft が揃
+っているか」を示す index の側面を持つのに対し、open-questions は
+各 draft に残っている OQ の個別処理を追う。
+
 文書番号（`03-*` 以降）は完了順に振る。マイルストーンの並行進行中は
 番号を予約せず、先に draft が出たものから次の番号を取る。既存の
 `01-`、`02-` は発行済みなので遡及して振り直すことはしない。「想定文

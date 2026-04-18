@@ -27,6 +27,13 @@ Sapphire の spec-first フェーズ（`docs/project-status.md` による
 roadmap 更新、draft → final のステータス更新、`CLAUDE.md` の規則
 改訂、そして実装時へ送られる OQ のここでの削除（必要なら）。
 
+**以後の OQ 追跡は `docs/open-questions.md`（living document）で
+行う**。本文書の監査表（`docs/spec/` 01〜12）、`docs/build/` の
+OQ（B1 トラック）、および `docs/tutorial/` の `仕様への気付き`
+節（T1 トラック）を 13 以後に統合した。下表は初期集計であり、
+継続的な記録は living document、本文書は M10 時点のスナップショ
+ットとして凍結する。
+
 ## 文書状態サマリ
 
 | 文書 | 範囲                                    | 状態 | 注記 |
