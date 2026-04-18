@@ -25,7 +25,7 @@ max 3 7
 
 -- Let-polymorphism: the same `id` is used at two different types
 let id = \x -> x in
-let _  = id 1 in
+let _x = id 1 in
 id "hello"
 
 -- Top-level with an explicit signature
@@ -132,8 +132,9 @@ Auxiliaries:
 
 - `instantiate(∀α₁…αₙ. τ)` substitutes each `αᵢ` with a fresh unification
   variable and returns the resulting monotype.
-- `generalize(Γ, τ) = ∀(ftv(τ) \ ftv(Γ)). τ`, where `ftv` denotes the set of
-  free type variables.
+- `generalize(Γ, τ) = ∀(ftv(τ) \ ftv(Γ)). τ`, where `ftv(τ)` is the set of
+  free type variables of `τ` and `ftv(Γ) = ⋃ { ftv(σ) | (_ : σ) ∈ Γ }`
+  lifts the same notion to environments.
 
 These are the standard declarative Hindley–Milner rules and are intended to
 be implementable by algorithm W (or J) without surprises.
@@ -144,6 +145,11 @@ be implementable by algorithm W (or J) without surprises.
   branches must have the same type. Once `Bool = True | False` becomes
   available as an ADT (see the ADT document), `if` may be respecified as
   sugar for `case` — see question 3 below.
+- The `BOOL` token and the (LitBool) rule assume that `True` and `False`
+  reach the core layer as literals. If later specification work decides
+  that `True` / `False` are ordinary prelude-bound identifiers instead,
+  (LitBool) becomes derivable from (Var) and this layer can drop it.
+  See question 1 of the lexical syntax document.
 - Top-level type signatures are syntactically permitted but not yet declared
   mandatory. The choice is intentionally deferred; see question 2.
 - The surface language chooses explicit `let ... in ...` here. Whether the
