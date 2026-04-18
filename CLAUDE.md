@@ -42,9 +42,14 @@ this section with the user.
 - Instruction files for Claude (this `CLAUDE.md`, anything under
   `.claude/`, future agent / command / skill definitions) are written
   in **English**.
-- User-facing documents (README, design notes under `docs/`, chat
-  replies, commit messages) can stay in Japanese. Spec documents under
-  `docs/spec/` are written in English.
+- User-facing documents (README, design notes under `docs/`, commit
+  messages) can stay in Japanese.
+- Spec documents live in two parallel trees with matching filenames:
+  the English version under `docs/spec/` and a Japanese translation
+  under `docs/spec/ja/`. The English version is the normative source;
+  the Japanese version is a translation kept in sync. When a spec
+  document is added or its normative content changes, update both
+  trees in the same change.
 - Chat replies to the user should stay in Japanese unless the user
   switches.
 

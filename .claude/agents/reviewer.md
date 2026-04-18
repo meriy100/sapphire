@@ -30,7 +30,7 @@ active.
 
 ## What to check
 
-For **spec documents** (`docs/spec/`):
+For **spec documents** (`docs/spec/` and `docs/spec/ja/`):
 
 - Internal consistency. Every BNF nonterminal that is used is also
   defined. Every symbol that appears in a typing rule is introduced
@@ -41,7 +41,13 @@ For **spec documents** (`docs/spec/`):
   Tensions with earlier spec documents are called out.
 - Host-language neutrality in normative text (no "in Rust we would…"
   baked into the spec itself).
-- English only.
+- The English version under `docs/spec/` is the normative source and
+  must be written in English. The Japanese version under
+  `docs/spec/ja/` must exist for every English document with a
+  matching filename, and its normative content must agree with the
+  English version (BNF productions, typing rules, keyword sets, and
+  numbered open questions should be identical; surrounding prose is
+  translated, not rewritten).
 
 For **design notes and status documents** (`docs/` outside
 `docs/spec/`):
