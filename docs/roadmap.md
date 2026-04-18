@@ -383,6 +383,11 @@ spec-first フェーズのロードマップ (M1–M10) 完了と並行して、
   で書き直す。HKT / `Functor f` / `Monad m` の一般化した視点は
   新設する「発展篇」に隔離する。作業対象は `docs/tutorial/05-*.md`
   と `06-*.md`、および新 chapter（07 以降の発展篇）。
+- **I1 ホスト言語選定** (2026-04-18 着手) — `docs/impl/` ツリー
+  を立ち上げ、ホスト言語候補（Rust / OCaml / Haskell / Ruby /
+  TypeScript / Crystal）を評価基準に沿って比較。overview・
+  criteria・candidates・matrix が揃った段階で、重み調整と
+  プロトタイプを経て `05-decision.md` に決定を記録する。
 
 これらは仕様の delta ではない（規範は 01〜13）が、仕様を読み解く
 ／実装するための支援文書として spec-first フェーズ完了と並行して

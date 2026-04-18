@@ -193,7 +193,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| 13-OQ1 | `docs/impl/` 導入タイミング | DECIDED | ホスト言語選定に着手する時点で初めて作成する（lazy 作成）。2026-04-18 user 承認。 |
+| 13-OQ1 | `docs/impl/` 導入タイミング | DECIDED | ホスト言語選定に着手する時点で初めて作成する（lazy 作成）。2026-04-18 user 承認、同日に `docs/impl/` を実作成（I1 トラック開始）。 |
 | 13-OQ2 | どの draft を "final" 昇格させるか | DEFERRED-IMPL | 最初のコンパイラが通して受理できてから検討。 |
 | 13-OQ3 | `docs/roadmap.md` の扱い | DECIDED | living document として次フェーズも維持。2026-04-18 user 承認。spec-first の節は「完了」マークを付けるが削除はしない。 |
 
