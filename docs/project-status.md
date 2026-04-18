@@ -42,7 +42,10 @@ and the Ruby interop / monad story are all answered), phase ordering
 will be revisited with the user.
 
 Progress is tracked as numbered documents under `docs/spec/`
-(`01-core-expressions.md` is the first of these).
+(`01-core-expressions.md` is the first of these). The planned
+sequence of documents and their dependencies — including the
+milestone that finalizes the name of the `RubyEval`-style monad —
+is laid out in `docs/roadmap.md`.
 
 ## Runtime environment
 
