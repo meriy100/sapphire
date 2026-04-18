@@ -84,6 +84,12 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   （単一 Ruby スレッド、`>>=` で直列化）、`run : Ruby a -> Result
   RubyError a` を唯一の pure 側出口として規定。09 の `print` stub
   を `Ruby {}` に retype。10 の `RubyM` 参照を `Ruby` へ統一。
+- **M9 例題プログラム集 (12 Example programs)** — draft 済み
+  (`docs/spec/12-example-programs.md`)。4 本の例題で 01〜11 を
+  end-to-end に exercise：Hello Ruby、数値ファイル解析、生徒レコ
+  ード処理（純粋）、HTTP 取得と分類（2 モジュール・Ruby 相互運用・
+  Result エラー処理）。各例題に読解ガイド付き、仕様未決箇所も可
+  視化。
 
 ## マイルストーン
 
