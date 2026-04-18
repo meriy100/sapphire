@@ -66,6 +66,11 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   修飾名解決、07 の孤児なし規則を grounding、再エクスポート。01 OQ2
   （トップレベルシグネチャ）を「エクスポート済は必須」で決着。02 に
   `as`/`hiding`/`qualified` キーワード追加。
+- **M6 prelude (09 Prelude)** — draft 済み
+  (`docs/spec/09-prelude.md`)。中核 ADT（`Bool`・`Ordering`・`Maybe`・
+  `Result`・`List`）、リスト構文（`[]`・`[x, y, z]`・`::`）、標準クラ
+  スの prelude インスタンス、基本 utility 関数。02 OQ1 と 01 OQ3 を
+  最終決着（`Bool` は ADT、`if` は `case` の糖衣）。
 
 ## マイルストーン
 

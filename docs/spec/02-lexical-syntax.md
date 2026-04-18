@@ -294,6 +294,15 @@ For convenience, the tokens referenced by document 01 resolve as:
    derivable from (Var) rather than primitive. (b) additionally
    raises the question of whether shadowing of prelude constructors
    should be forbidden at the language level or handled as a lint.
+   *Closed by document 09*: (b). `Bool` is the prelude ADT
+   `data Bool = False | True`; `True` and `False` are ordinary
+   `upper_ident` constructors. 01's (LitBool) is derivable from
+   (Var) applied to these constructor schemes. Rebinding a
+   constructor name to a value is forbidden by document 06
+   (§Design notes, namespace discipline); shadowing a prelude
+   constructor by a user `data` declaration is governed by
+   document 08's import-conflict rules (two in-scope definitions
+   of the same name produce an ambiguity at use sites).
 2. **Unary minus.** Is `-` at the start of an expression a unary
    operator with a fixed precedence, or must negation be written
    `negate x` / `(0 - x)`? The former is friendlier but forces `-` to

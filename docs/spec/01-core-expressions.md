@@ -176,8 +176,11 @@ be implementable by algorithm W (or J) without surprises.
    `Bool = True | False` exists, respecify `if c then t else f` as sugar for
    `case c of { True -> t ; False -> f }` and drop the primitive rule?
    *Partially addressed by document 06*: `case` is now available and the
-   sugar reading is mechanically possible. The final switch is contingent
-   on M6 closing 02 OQ 1 (`Bool` as ADT vs. lexically distinct).
+   sugar reading is mechanically possible.
+   *Closed by document 09*: sugar. With `Bool` defined as the ADT
+   `data Bool = False | True` in the prelude, `if ... then ... else ...`
+   is surface sugar for the corresponding `case`; (If) is retained in
+   01 as a derivable lemma for readers.
 4. **Numeric tower.** Stay with a single `Int` at this layer, and decide
    later whether to add `Float` as a separate type or introduce a unified
    `Number`. This document assumes the former is at least possible.

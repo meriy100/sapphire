@@ -93,9 +93,12 @@ import_decl ::= 'import' mod_name import_tail
 
 import_tail ::= ε
               | 'as' TCON
-              | 'as' TCON '(' import_item (',' import_item)* ')'
-              | '(' import_item (',' import_item)* ')'
-              | 'hiding' '(' import_item (',' import_item)* ')'
+              | 'as' TCON '(' import_item_list ')'
+              | '(' import_item_list ')'
+              | 'hiding' '(' import_item_list ')'
+
+import_item_list ::= ε                                -- 空リスト可
+                   | import_item (',' import_item)*
 
 import_item ::= IDENT
               | TCON
