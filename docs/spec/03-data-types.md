@@ -336,6 +336,10 @@ at this layer; see 01 OQ 2, to be closed in M4 (modules).
    interact with M3 (pattern matching), which must distinguish
    constructor patterns from variable patterns syntactically, and
    will likely fix both at once.
+   *Closed by document 06*: `upper_ident` is always a constructor
+   reference in both expression and pattern position; `lower_ident`
+   at pattern head is always a binding. Rebinding a constructor name
+   with a value binding is a static error.
 
 6. **Local `data` declarations.** This document makes `data`
    top-level only. Whether a later document introduces local

@@ -173,6 +173,9 @@ be implementable by algorithm W (or J) without surprises.
 3. **`if` as primitive vs. sugar.** Keep (If) as a primitive rule, or once
    `Bool = True | False` exists, respecify `if c then t else f` as sugar for
    `case c of { True -> t ; False -> f }` and drop the primitive rule?
+   *Partially addressed by document 06*: `case` is now available and the
+   sugar reading is mechanically possible. The final switch is contingent
+   on M6 closing 02 OQ 1 (`Bool` as ADT vs. lexically distinct).
 4. **Numeric tower.** Stay with a single `Int` at this layer, and decide
    later whether to add `Float` as a separate type or introduce a unified
    `Number`. This document assumes the former is at least possible.

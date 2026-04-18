@@ -27,8 +27,8 @@ Closes:
 - 02 OQ 3 (operator table) — fixed Elm-style table; user-declarable
   fixity is re-posed as 05 OQ 3.
 - 02 OQ 6 (`::` disambiguation) — `::` is list cons (to be realized
-  in M6); any pattern-level type annotation will use a different
-  spelling in M3.
+  in M6); pattern-level type annotation uses a different spelling,
+  fixed by document 06 as `(pat : type)`.
 
 ## Abstract syntax (BNF)
 
@@ -192,11 +192,11 @@ right-associative, typed `∀ a. a -> List a -> List a`. The `List`
 type and the `::` binding itself are introduced in M6; this document
 only reserves the token with its precedence and intended type.
 
-Pattern-level type annotation, if needed, will be spelled differently
-(a likely candidate, to be fixed in M3, is `(pat : type)` —
-parenthesized, reusing the existing `:` annotation separator). This
-choice is driven by `::` being more frequently used than pattern-
-level type annotation in typical Sapphire programs.
+Pattern-level type annotation uses a different spelling:
+`(pat : type)` — parenthesised, reusing the existing `:` annotation
+separator. This is confirmed by document 06 (pattern matching).
+The choice is driven by `::` being more frequently used than
+pattern-level type annotation in typical Sapphire programs.
 
 ## Design notes (non-normative)
 
