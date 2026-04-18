@@ -76,7 +76,14 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   引用符文字列リテラル、データモデル（Int/String/Bool/record/ADT/
   List/関数）、タグ付きハッシュ ADT 表現、`RubyError` 型、生成
   Ruby モジュール形（`Sapphire::M::N::P` クラス階層）。モナド意味
-  論は M8 に委譲（`RubyM` を opaque 型として扱う）。
+  論は M8 に委譲（`Ruby` を opaque 型として扱う）。
+- **M8 Ruby 評価モナド (11 Ruby evaluation monad)** — draft 済み
+  (`docs/spec/11-ruby-monad.md`)。型名を `Ruby` と確定（`Ruby`
+  モジュールに同居）。`Functor`/`Applicative`/`Monad Ruby` インス
+  タンス、プリミティブ `primReturn` / `primBind`、逐次実行モデル
+  （単一 Ruby スレッド、`>>=` で直列化）、`run : Ruby a -> Result
+  RubyError a` を唯一の pure 側出口として規定。09 の `print` stub
+  を `Ruby {}` に retype。10 の `RubyM` 参照を `Ruby` へ統一。
 
 ## マイルストーン
 

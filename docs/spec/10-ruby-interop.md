@@ -19,9 +19,9 @@ This document fixes the data-model half of both directions — how
 Sapphire values correspond to Ruby values and how errors flow —
 and introduces the surface syntax for embedding Ruby source. It
 **does not** fix the evaluation semantics of the embedded Ruby
-code; that is the concern of document M8 (the Ruby-evaluation
-monad). This document treats the monad as an opaque type `RubyM`;
-M8 will name and fully specify it.
+code; that is the concern of document 11 (the Ruby-evaluation
+monad). This document treats the monad as an opaque type `Ruby`;
+11 names and fully specifies it.
 
 In scope:
 
@@ -32,17 +32,17 @@ In scope:
   (the M7 amendment to 02's string-literal grammar).
 - The marshalling rules for each Sapphire type (`Int`, `String`,
   `Bool`, records, ADTs, functions, `Maybe`, `Result`, `List`,
-  `Ordering`, and the opaque `RubyM a` wrapper).
+  `Ordering`, and the opaque `Ruby a` wrapper).
 - The Ruby-side exception model — how a raised Ruby exception
   surfaces on the Sapphire side.
 - The shape and naming of the generated Ruby module.
 
-Out of scope (M8):
+Out of scope (document 11):
 
 - Evaluation order of chained Ruby actions.
 - Threading / concurrency model for Ruby execution.
-- `return` / `pure` / `>>=` for `RubyM`.
-- The final name of the `RubyM` type.
+- `return` / `pure` / `>>=` for `Ruby`.
+- The `run` function and the `Monad Ruby` instance.
 
 ## The embedding form
 
@@ -75,7 +75,7 @@ in scope (the `:` form preceding the binding). 08's boundary rule
 already requires this for exported bindings; 10 additionally
 requires it for **every** `:=` binding, including private ones,
 because the type is what the marshalling boundary consults. The
-signature's result type is required to be of the form `RubyM τ`
+signature's result type is required to be of the form `Ruby τ`
 (possibly wrapped in further `-> τ'` arrows before hitting the
 monad). A `:=` binding whose declared result is a pure type is a
 static error.
@@ -83,10 +83,10 @@ static error.
 Example:
 
 ```
-rubyUpper : String -> RubyM String
+rubyUpper : String -> Ruby String
 rubyUpper s := "s.upcase"
 
-rubyReadLines : String -> RubyM (List String)
+rubyReadLines : String -> Ruby (List String)
 rubyReadLines path := """
   File.readlines(path).map(&:chomp)
 """
@@ -249,24 +249,24 @@ function `a -> b -> c` surfaces as a Ruby lambda that returns
 another lambda when called with one argument (not a two-argument
 lambda).
 
-### `RubyM a`
+### `Ruby a`
 
-Values of the opaque type `RubyM a` do not cross the boundary as
-data — they **are** the boundary. A `RubyM a` on the Sapphire
+Values of the opaque type `Ruby a` do not cross the boundary as
+data — they **are** the boundary. A `Ruby a` on the Sapphire
 side represents a suspended computation that, when run, produces
 a Ruby-side side-effect and returns a Ruby value that unmarshals
 as `a`. M8 defines the monadic operations and the `run`-shaped
-function that drives a `RubyM a` to completion.
+function that drives a `Ruby a` to completion.
 
 This document only states the **marshalling contract**: the Ruby
 source code embedded in a `:=` binding's body produces a Ruby
 value whose marshalled type is `a` (assuming the binding's
-declared type is `RubyM a`); errors during evaluation surface per
+declared type is `Ruby a`); errors during evaluation surface per
 §Exception model.
 
 ## Exception model
 
-Ruby code is allowed to raise. When a `RubyM a` action is run
+Ruby code is allowed to raise. When a `Ruby a` action is run
 (per M8) and the underlying Ruby code raises an exception, the
 action's result is **not** a successful `a` but an exception
 surfaced to the Sapphire side.
@@ -279,33 +279,26 @@ and converted to a Sapphire-side `RubyError` value. The
 data RubyError = RubyError { class_name : String, message : String, backtrace : List String }
 ```
 
-`RubyError` lives in a **new prelude-adjacent module named
-`Ruby`**, imported implicitly alongside `Prelude`. It is not
-added to `Prelude` itself because its shape is Ruby-specific and
-unrelated to the core prelude concerns of 09. Placing it in its
-own module also gives M8 a natural home for the `RubyM` type and
-`runRuby` function (they will move into the same `Ruby` module,
-avoiding orphan-instance concerns under 08).
+`RubyError` lives in a **prelude-adjacent module named `Ruby`**,
+imported implicitly alongside `Prelude`. It is not added to
+`Prelude` itself because its shape is Ruby-specific and unrelated
+to the core prelude concerns of 09. Document 11 houses the
+monad type `Ruby` and the `run` function in the same module,
+avoiding orphan-instance concerns under 08.
 
 (The triple-field record constructor uses 04 records and the
 named-field constructor shape discussed as 04 OQ 2; if 04 OQ 2 is
 resolved in favour of positional-only constructors, `RubyError`
 is respelled as `RubyError String String (List String)`.)
 
-How `RubyError` reaches user code depends on M8's monad shape:
-
-- If `RubyM a` has an error channel (i.e. `RubyM a` is
-  semantically `RubyThread (Result RubyError a)` under the hood),
-  failures are ordinary `Err RubyError` values at the Sapphire
-  type level.
-- If `RubyM a` treats exceptions as short-circuiting termination,
-  M8 exposes a function `runRuby : RubyM a -> Result RubyError a`
-  that surfaces the outcome.
-
-Either way, this document fixes **only** the `RubyError` type and
-the "Ruby exceptions are caught at the boundary, never propagate
-uncaught into Sapphire" rule. M8 picks the shape of the user-
-facing interface.
+How `RubyError` reaches user code is fixed by document 11: the
+`Ruby a` type treats a Ruby exception as short-circuiting
+termination of the action, and document 11 exposes
+`run : Ruby a -> Result RubyError a` as the single pure-side
+entry point that surfaces the outcome. This document fixes only
+the `RubyError` type and the "Ruby exceptions are caught at the
+boundary, never propagate uncaught into Sapphire" rule; document
+11 fills in the user-facing interface.
 
 ## Generated Ruby module shape
 
@@ -351,7 +344,7 @@ The generated method takes its Sapphire arguments in order,
 unmarshals them per §Data model, runs the Sapphire-side logic,
 and marshals the result back.
 
-For `RubyM`-typed bindings:
+For `Ruby`-typed bindings:
 
 - The generated method does **not** marshal the body's Ruby
   output back to Sapphire; it runs the Ruby source verbatim and
@@ -396,17 +389,17 @@ Naming details:
 - **02.** Triple-quoted string literals extend 02's string-literal
   grammar, under its additive-growth clause. The existing
   single-line `string_lit` is unchanged.
-- **07.** `:=` bindings produce `RubyM a` values, which must be
+- **07.** `:=` bindings produce `Ruby a` values, which must be
   `Monad` instances for `do` notation to work. M8 declares
-  `instance Monad RubyM`; this document presupposes the instance.
+  `instance Monad Ruby`; this document presupposes the instance.
 - **08.** A Sapphire module's generated Ruby class is keyed by
   its module name (per 08 §One module per file). Imports across
   the Sapphire side do not affect Ruby-side class layout — each
   module's Ruby class is independent.
 - **09.** The prelude's `print` stub is the canonical example of
-  a forthcoming `RubyM`-typed binding. Its current
+  a forthcoming `Ruby`-typed binding. Its current
   `Result String {}` type will be replaced by something like
-  `Show a => a -> RubyM {}` once M8 lands.
+  `Show a => a -> Ruby {}` once M8 lands.
 
 ## Design notes (non-normative)
 
