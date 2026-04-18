@@ -355,10 +355,16 @@ to a Sapphire-side `RubyError` value. The runtime carries the
 type:
 
 ```ruby
-# Sapphire-side type (per 10 + 13 amendment §Interaction with
-# earlier drafts, positional-only after 04 OQ 2's disposition):
+# Sapphire-side type per 10 §Exception model (currently named-field):
+#   data RubyError = RubyError { class_name : String
+#                              , message    : String
+#                              , backtrace  : List String }
+#
+# Once 13's M10 D-decision on 04 OQ 2 lands (sign-off pending),
+# the type respells to positional:
 #   data RubyError = RubyError String String (List String)
-#                              -- class_name message backtrace
+# The marshalled Ruby representation below is field-order-driven
+# and works under either spelling.
 
 module Sapphire
   module Runtime
@@ -381,10 +387,21 @@ boundary inside `Ruby.run` (above). Per 11 §Execution model item
 sub-step whose continuation has not yet started is skipped, and
 the `Result` returned by `run` is `Err`.
 
-The catch is **broad**: every `StandardError` (and only
-`StandardError`; system-level signals like `Interrupt` and
-`SystemExit` propagate). Whether to catch `Exception` more
-broadly is 03 OQ 5.
+The catch is **broad within user-level Ruby errors**: every
+`StandardError` is caught. System-level signals — `Interrupt`
+(Ctrl-C), `SystemExit`, `NoMemoryError`, `SystemStackError`, and
+the rest of the non-`StandardError` `Exception` subclasses —
+**propagate past the boundary**.
+
+This creates a visible tension with 10 §Exception model, which
+reads absolutely: "Ruby exceptions are caught at the boundary,
+never propagate uncaught into Sapphire." The build-side
+interpretation is that 10's phrasing should be read as scoped to
+*user-level* Ruby exceptions (`StandardError` and below), and
+that signal-class exceptions are an unavoidable escape. This is
+not a decision this document has authority to make; 03 OQ 5
+records the tension so spec-side can resolve it (either by
+narrowing 10's wording or by widening the catch to `Exception`).
 
 The captured `e.class.name`, `e.message`, and `e.backtrace`
 populate the three `RubyError` fields per 10. `backtrace` may be

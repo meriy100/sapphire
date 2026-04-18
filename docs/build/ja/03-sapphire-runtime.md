@@ -341,10 +341,15 @@ RubyError a` だから）。
 値に変換される。ランタイムが型を担う：
 
 ```ruby
-# Sapphire 側型（10 + 13 §以前 draft との相互作用 修正に従う、
-# 04 OQ 2 の disposition 後は positional のみ）：
+# Sapphire 側型は 10 §例外モデル に従い現状では名前付きフィールド：
+#   data RubyError = RubyError { class_name : String
+#                              , message    : String
+#                              , backtrace  : List String }
+#
+# 13 の M10 D 決定（04 OQ 2、サインオフ待ち）が着地すると型は
+# positional に再綴りされる：
 #   data RubyError = RubyError String String (List String)
-#                              -- class_name message backtrace
+# 下の Ruby 表現はフィールド順駆動で、どちらの綴りでも動く。
 
 module Sapphire
   module Runtime
@@ -366,9 +371,19 @@ end
 クションを短絡する：継続がまだ始まっていない任意のサブステップ
 は飛ばされ、`run` の返す `Result` は `Err` となる。
 
-捕捉は**広い**：すべての `StandardError`（かつ `StandardError`
-のみ；`Interrupt` や `SystemExit` のようなシステムレベルシグナ
-ルは伝搬する）。`Exception` をより広く捕捉すべきかは 03 OQ 5。
+捕捉は **ユーザレベル Ruby エラーについては広い**：すべての
+`StandardError` を捕捉する。システムレベルシグナル — `Interrupt`
+（Ctrl-C）・`SystemExit`・`NoMemoryError`・`SystemStackError`、
+他の非 `StandardError` な `Exception` サブクラス — は **境界を超
+えて伝搬する**。
+
+これは 10 §例外モデル の絶対的な表現「Ruby 例外は境界で捕捉され、
+未捕捉のまま Sapphire に伝搬しない」と可視の緊張を生む。ビルド側
+の解釈は、10 の表現を *ユーザレベル* の Ruby 例外（`StandardError`
+以下）に scoped として読み、シグナルクラス例外は不可避な脱出と
+する。本文書はこれを決定する権限を持たず、03 OQ 5 が spec 側で
+解決できるよう緊張を記録する（10 の表現を狭めるか、捕捉を
+`Exception` まで広げるか）。
 
 捕捉した `e.class.name`、`e.message`、`e.backtrace` が 10 に従
 い `RubyError` の 3 フィールドに入る。`backtrace` は Ruby が組

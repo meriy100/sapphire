@@ -29,10 +29,8 @@ Out of scope:
 ## Executable name
 
 The CLI executable is **`sapphire`**. It is installed by whatever
-mechanism the host-language phase (`docs/impl/`) chooses (a Rust
-crate's `cargo install`, an OCaml `opam install`, a Ruby
-gemspec's `executables`, etc.); the build pipeline does not
-prescribe the install mechanism.
+mechanism the host-language phase (`docs/impl/`) eventually
+chooses; this document does not prescribe the install mechanism.
 
 When a user types
 
@@ -98,9 +96,11 @@ Behaviour:
 - If `--no-build` is not given, performs a `sapphire build`
   first.
 - Resolves `<entry>` to a Sapphire module + binding pair. The
-  default entry is `main:run` — module `Main`, binding `run`.
-  An explicit `<entry>` may name `Module.binding`
-  (e.g. `App.serve`).
+  default entry is `Main.run` — module `Main`, binding `run`.
+  An explicit `<entry>` takes the same `Module.binding` form
+  (e.g. `App.serve`). Module segments are `upper_ident`
+  (PascalCase) per 02 §Identifiers; binding names are
+  `lower_ident`.
 - The resolved binding's type must unify with `Ruby a` for some
   `a` (per 11 §`run`). The pipeline invokes the
   `Sapphire::Runtime::Ruby.run(entry_action)` and inspects the
@@ -252,11 +252,13 @@ Pipeline-level ordering contract:
 - A cycle in the import graph is a static error reported by
   the pipeline before any output is written.
 
-The toposort is the same operation that 13 §Cross-doc
-consistency calls out as load-bearing for instance resolution
-(per 08 §Instances and modules). The pipeline computes it once
-per build invocation; incremental builds may cache it (see
-§Incremental compilation below).
+The toposort is also what makes 08 §Instances and modules'
+no-orphan invariant computable per build: instance visibility
+follows transitive imports, so a bottom-up compile order lets
+each module observe exactly the instances in its import closure.
+The pipeline computes the toposort once per build invocation;
+incremental builds may cache it (see §Incremental compilation
+below).
 
 ## Incremental compilation
 

@@ -32,9 +32,8 @@
 ## 実行ファイル名
 
 CLI 実行ファイルは **`sapphire`**。インストール機構はホスト言
-語フェーズ（`docs/impl/`）が選ぶもの（Rust crate の `cargo
-install`、OCaml `opam install`、Ruby gemspec の `executables`
-等）；ビルドパイプラインはインストール機構を規定しない。
+語フェーズ（`docs/impl/`）が後に選ぶもの。本文書はインストー
+ル機構を規定しない。
 
 ユーザがプロジェクトルート（または `--project-root <dir>` で上
 書き）で
@@ -98,8 +97,10 @@ $ sapphire run [<entry>] [--project-root DIR] [--config FILE]
 - `--no-build` が与えられない限り、まず `sapphire build` を実
   行する。
 - `<entry>` を Sapphire モジュール + 束縛のペアに解決する。既
-  定エントリは `main:run` — モジュール `Main`、束縛 `run`。明示
-  的 `<entry>` は `Module.binding` を名指せる（例：`App.serve`）。
+  定エントリは `Main.run` — モジュール `Main`、束縛 `run`。明示
+  的 `<entry>` も同じ `Module.binding` 形（例：`App.serve`）を
+  取る。モジュールセグメントは `upper_ident`（PascalCase、文書
+  02 §識別子）、束縛名は `lower_ident`。
 - 解決された束縛の型はある `a` について `Ruby a` と単一化しな
   ければならない（11 §`run` に従う）。パイプラインは
   `Sapphire::Runtime::Ruby.run(entry_action)` を起動し、結果の
@@ -241,10 +242,12 @@ major バージョンを bump する。明示的 `schema_version:` キーを
 - import グラフの循環は、出力が書かれる前にパイプラインが報告
   する静的エラー。
 
-topological sort は 13 §文書間整合検査がインスタンス解決
-（08 §インスタンスとモジュールに従う）について load-bearing と
-呼んでいる操作と同じ。パイプラインはビルド起動ごとにそれを 1
-回計算する；incremental ビルドはそれを cache してよい
+topological sort は 08 §インスタンスとモジュール の孤児なし
+不変条件をビルドごとに計算可能にするものでもある：インスタン
+スの可視性は推移的インポートに従うため、ボトムアップのコンパ
+イル順序によって、各モジュールは自身の import 閉包内のインス
+タンスだけを観測する。パイプラインはビルド起動ごとに toposort
+を 1 回計算する；incremental ビルドはそれを cache してよい
 （後述 §Incremental compilation を参照）。
 
 ## Incremental compilation
