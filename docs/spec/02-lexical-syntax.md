@@ -95,11 +95,14 @@ The following lowercase words are reserved and cannot appear as
 let    in     if     then   else   case   of
 module import export where  forall data
 class  instance do
+as     hiding qualified
 ```
 
 `data` was added by document 03 under the additive-growth clause
 below. `class`, `instance`, and `do` were added by document 07
 (type classes and higher-kinded types) under the same clause.
+`as`, `hiding`, and `qualified` were added by document 08
+(modules) under the same clause.
 
 `True` and `False` are **not** keywords. Their surface form is a
 plain `upper_ident`. Whether the lexer nonetheless recognizes them

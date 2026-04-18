@@ -60,6 +60,12 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   標準クラス `Eq`/`Ord`/`Show`/`Functor`/`Applicative`/`Monad`、
   `do` 記法。03 の「高階種は後送り」、05 OQ2（多相等価）を決着。
   02 に `<-` 予約と `class`/`instance`/`do` キーワード追加。
+- **M4 モジュール (08 Modules)** — draft 済み
+  (`docs/spec/08-modules.md`)。1 ファイル 1 モジュール、`module` ヘッ
+  ダ、明示エクスポートリスト、`import`（修飾・非修飾・`hiding`・`as`）、
+  修飾名解決、07 の孤児なし規則を grounding、再エクスポート。01 OQ2
+  （トップレベルシグネチャ）を「エクスポート済は必須」で決着。02 に
+  `as`/`hiding`/`qualified` キーワード追加。
 
 ## マイルストーン
 

@@ -170,6 +170,8 @@ be implementable by algorithm W (or J) without surprises.
    policy simplifies error messages and principal-type questions at module
    boundaries. An optional-signatures policy is friendlier but interacts
    with future type-class-like mechanisms.
+   *Closed by document 08*: boundary rule. Exported top-level value
+   bindings require an explicit signature; private ones do not.
 3. **`if` as primitive vs. sugar.** Keep (If) as a primitive rule, or once
    `Bool = True | False` exists, respecify `if c then t else f` as sugar for
    `case c of { True -> t ; False -> f }` and drop the primitive rule?
