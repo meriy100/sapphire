@@ -271,13 +271,25 @@ Ruby code is allowed to raise. When a `Ruby a` action is run
 action's result is **not** a successful `a` but an exception
 surfaced to the Sapphire side.
 
-The contract: every Ruby-side exception is caught at the boundary
-and converted to a Sapphire-side `RubyError` value. The
-`RubyError` type is defined here as:
+The contract: every Ruby-side **user-level** exception
+(`StandardError` and its descendants) is caught at the boundary
+and converted to a Sapphire-side `RubyError` value. System-level
+exceptions (`SystemExit`, `Interrupt`, `NoMemoryError`,
+`SystemStackError`, and other non-`StandardError` `Exception`
+subclasses) are **not** caught and propagate through the
+boundary, ending the Ruby process in the usual way. This
+matches standard Ruby practice, where `rescue => e` (i.e.
+`rescue StandardError`) is the conventional catch breadth.
+
+The `RubyError` type is defined here as:
 
 ```
-data RubyError = RubyError { class_name : String, message : String, backtrace : List String }
+data RubyError = RubyError String String (List String)
+                         -- class_name   message    backtrace
 ```
+
+(Positional-only per 04 OQ 2's decision. Field semantics are
+class name, message, and backtrace, in that order.)
 
 `RubyError` lives in a **prelude-adjacent module named `Ruby`**,
 imported implicitly alongside `Prelude`. It is not added to
@@ -286,19 +298,22 @@ to the core prelude concerns of 09. Document 11 houses the
 monad type `Ruby` and the `run` function in the same module,
 avoiding orphan-instance concerns under 08.
 
-(The triple-field record constructor uses 04 records and the
-named-field constructor shape discussed as 04 OQ 2; if 04 OQ 2 is
-resolved in favour of positional-only constructors, `RubyError`
-is respelled as `RubyError String String (List String)`.)
+<!-- 04 OQ 2 was closed 2026-04-18 as positional-only. The type
+     is therefore defined positionally above, not as a named-field
+     constructor. Older drafts may still show a named-field
+     spelling for `RubyError`; update call sites to positional
+     (`RubyError class msg bt` / `case e of RubyError c m b -> ...`). -->
+
 
 How `RubyError` reaches user code is fixed by document 11: the
-`Ruby a` type treats a Ruby exception as short-circuiting
-termination of the action, and document 11 exposes
-`run : Ruby a -> Result RubyError a` as the single pure-side
-entry point that surfaces the outcome. This document fixes only
-the `RubyError` type and the "Ruby exceptions are caught at the
-boundary, never propagate uncaught into Sapphire" rule; document
-11 fills in the user-facing interface.
+`Ruby a` type treats a caught user-level Ruby exception as
+short-circuiting termination of the action, and document 11
+exposes `run : Ruby a -> Result RubyError a` as the single
+pure-side entry point that surfaces the outcome. This document
+fixes only the `RubyError` type and the scoped catching rule
+("user-level Ruby exceptions — `StandardError` and below — are
+caught at the boundary; system-level exceptions propagate past
+it"); document 11 fills in the user-facing interface.
 
 ## Generated Ruby module shape
 

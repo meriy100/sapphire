@@ -96,13 +96,16 @@ let    in     if     then   else   case   of
 module import export where  forall data
 class  instance do
 as     hiding qualified
+type
 ```
 
 `data` was added by document 03 under the additive-growth clause
 below. `class`, `instance`, and `do` were added by document 07
 (type classes and higher-kinded types) under the same clause.
 `as`, `hiding`, and `qualified` were added by document 08
-(modules) under the same clause.
+(modules) under the same clause. `type` was added by document 09
+(prelude) under the same clause, for the type-alias form
+`type T = τ`.
 
 `True` and `False` are **not** keywords. Their surface form is a
 plain `upper_ident`. Whether the lexer nonetheless recognizes them

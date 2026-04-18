@@ -341,15 +341,11 @@ RubyError a` だから）。
 値に変換される。ランタイムが型を担う：
 
 ```ruby
-# Sapphire 側型は 10 §例外モデル に従い現状では名前付きフィールド：
-#   data RubyError = RubyError { class_name : String
-#                              , message    : String
-#                              , backtrace  : List String }
-#
-# 13 の M10 D 決定（04 OQ 2、サインオフ待ち）が着地すると型は
-# positional に再綴りされる：
+# Sapphire 側型は 10 §例外モデル に従い位置引数（04 OQ 2 の
+# 2026-04-18 決着に従う）：
 #   data RubyError = RubyError String String (List String)
-# 下の Ruby 表現はフィールド順駆動で、どちらの綴りでも動く。
+#                              -- class_name  message  backtrace
+# 下の Ruby 表現はフィールド順駆動。
 
 module Sapphire
   module Runtime
@@ -377,13 +373,11 @@ end
 他の非 `StandardError` な `Exception` サブクラス — は **境界を超
 えて伝搬する**。
 
-これは 10 §例外モデル の絶対的な表現「Ruby 例外は境界で捕捉され、
-未捕捉のまま Sapphire に伝搬しない」と可視の緊張を生む。ビルド側
-の解釈は、10 の表現を *ユーザレベル* の Ruby 例外（`StandardError`
-以下）に scoped として読み、シグナルクラス例外は不可避な脱出と
-する。本文書はこれを決定する権限を持たず、03 OQ 5 が spec 側で
-解決できるよう緊張を記録する（10 の表現を狭めるか、捕捉を
-`Exception` まで広げるか）。
+これは 10 §例外モデル と整合する。10 は 2026-04-18 に捕捉規則
+を *ユーザレベル* Ruby 例外（`StandardError` 以下）に scope する
+よう narrow された。シグナルクラス例外（`Interrupt`・`SystemExit`・
+`NoMemoryError`・`SystemStackError`）は設計上境界を通り抜ける。
+03 OQ 5 はこの tension が解消された経緯を記録するものである。
 
 捕捉した `e.class.name`、`e.message`、`e.backtrace` が 10 に従
 い `RubyError` の 3 フィールドに入る。`backtrace` は Ruby が組
@@ -501,6 +495,12 @@ require 'sapphire/runtime'
    は誤り；より緩いポリシーは `NoMemoryError` を境界外へ脱出さ
    せ、これは 10 が禁じる。Draft：`StandardError`。境界の sanity-
    check としてのみ委譲；blocker ではない。
+   *2026-04-18 決定*: `StandardError` のみ捕捉で合意。同じ変更で
+   10 §例外モデル の絶対表現「未捕捉のまま伝搬しない」をユーザ
+   レベル（`StandardError` 以下）の例外に狭めた。システムレベル
+   例外（`Interrupt`・`SystemExit`・`NoMemoryError`・
+   `SystemStackError` など）は設計上境界を通り抜ける。ビルド側
+   の tension は解消。
 
 6. **load 時のランタイムバージョン検証。** 各生成ファイルの由
    来コメントは対象ランタイムバージョン名を持つ（02 §ファイル内

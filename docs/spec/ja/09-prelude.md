@@ -291,6 +291,34 @@ return                    : Monad m       => a -> m a      -- 既定は pure
 `(/=)`・`<`・`>`・`<=`・`>=` に対する Int 専用エントリは、07 に
 従って `Eq Int` / `Ord Int` の **インスタンス** として解釈し直す。
 
+## 型別名
+
+**型別名** は既存の型に別名を与える。新しい nominal 型は作らない：
+
+```
+decl ::= ...                                      -- (01, 03, 07)
+       | 'type' TCON TVAR* '=' type               -- 別名宣言
+```
+
+例：
+
+```
+type Student = { name : String, grade : Int, score : Int }
+type Age     = Int
+type Table k v = List { key : k, value : v }
+```
+
+別名は **透明**：型検査器から見ると `Student` と
+`{ name : String, grade : Int, score : Int }` は同じ型。別名に
+型パラメータ（上の `Table k v` など）を持たせることもでき、使用
+箇所で通常通り置換される。
+
+別名はセレクタ関数を生成せず、インスタンス解決を変えず、独立した
+コンストラクタとしてパターンマッチできない — 純粋な表層リネー
+ムである。
+
+`type` は 02 §予約語 の追加拡張条項のもと予約語集合に加わる。
+
 ## Utility 関数
 
 最小の有用集合。各シグネチャはエクスポート済 prelude コードが見る
@@ -321,6 +349,10 @@ fromMaybe   : a -> Maybe a -> a
 
 result      : (e -> b) -> (a -> b) -> Result e a -> b
 mapErr      : (e -> e') -> Result e a -> Result e' a
+
+readInt     : String -> Maybe Int
+
+join        : Monad m => m (m a) -> m a
 
 when        : Applicative f => Bool -> f {} -> f {}
 unless      : Applicative f => Bool -> f {} -> f {}
@@ -386,6 +418,8 @@ module Prelude
   , fst, snd
   , maybe, fromMaybe
   , result, mapErr
+  , readInt
+  , join
   , when, unless
   , pure, return
   , show, print
@@ -468,6 +502,7 @@ prelude 規則により、通常のモジュールは列挙された全名を既
 
 2. **型別名。** `type Either e a = Result e a` 風の糖衣を採るか。
    本文書と直交だが、ここで役立つ。まだ未規定。
+   *2026-04-18 決定*：上記 §型別名 節により透明な別名として採用。
 
 3. **`String` を文字のリストとするか。** Haskell の `type String
    = [Char]` は `Char` 型を要求する。Sapphire の `String` はプリ

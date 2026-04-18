@@ -253,11 +253,21 @@ the grammar; a minimum of one field binding is required by
    but diverge on what selectors and patterns become available.
    This document takes no position; the design interacts with
    pattern matching (M3).
+   *Closed 2026-04-18*: do not admit named-field constructor
+   payloads in the first implementation. Constructor arguments
+   are positional; a user who wants named access declares a
+   record type and has the constructor take that record as a
+   single argument (e.g.
+   `type Circle = { radius : Int }; data Shape = Circle Circle`).
+   Revisiting (b) "sugar form" remains available as a pure
+   addition if demand emerges later.
 
 3. **Punning shorthand.** Should `{ x, y }` be admitted as shorthand
    for `{ x = x, y = y }` in record literals (and, once M3 lands,
    for `{ x, y }` as a pattern)? A `yes` answer would match
    PureScript / Elm; a `no` answer is simpler to parse and teach.
+   *Closed 2026-04-18*: no — not admitted. Users write the
+   explicit form `{ x = x, y = y }`.
 
 4. **Symmetric update (field addition / removal).** `{ r | f = v }`
    currently replaces an existing field's value without changing

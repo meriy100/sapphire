@@ -298,6 +298,37 @@ The declared types match document 05's operator table once 05's
 Int-only entries for `(==)`, `(/=)`, `<`, `>`, `<=`, `>=` are
 reinterpreted as the `Eq Int` / `Ord Int` **instances**, per 07.
 
+## Type aliases
+
+A **type alias** introduces a second name for an existing type,
+without creating a new nominal type:
+
+```
+decl ::= ...                                      -- (01, 03, 07)
+       | 'type' TCON TVAR* '=' type               -- alias declaration
+```
+
+Examples:
+
+```
+type Student = { name : String, grade : Int, score : Int }
+type Age     = Int
+type Table k v = List { key : k, value : v }
+```
+
+An alias is **transparent**: `Student` and
+`{ name : String, grade : Int, score : Int }` are the same type
+from the type-checker's point of view. Alias names may carry
+type parameters (`Table k v` above), which are substituted at
+use sites in the usual way.
+
+An alias does not generate selector functions, does not change
+instance resolution, and cannot be pattern-matched against as a
+separate constructor — it is purely a surface renaming.
+
+`type` joins document 02's keyword set under the additive-growth
+clause of 02 §Keywords.
+
 ## Utility functions
 
 A minimum useful set. Each signature is the scheme that exported
@@ -328,6 +359,10 @@ fromMaybe   : a -> Maybe a -> a
 
 result      : (e -> b) -> (a -> b) -> Result e a -> b
 mapErr      : (e -> e') -> Result e a -> Result e' a
+
+readInt     : String -> Maybe Int
+
+join        : Monad m => m (m a) -> m a
 
 when        : Applicative f => Bool -> f {} -> f {}
 unless      : Applicative f => Bool -> f {} -> f {}
@@ -398,6 +433,8 @@ module Prelude
   , fst, snd
   , maybe, fromMaybe
   , result, mapErr
+  , readInt
+  , join
   , when, unless
   , pure, return
   , show, print
@@ -490,6 +527,8 @@ listed name unqualified by default.
 2. **Type aliases.** `type Either e a = Result e a` style sugar?
    Orthogonal to everything in this document but would be useful
    here. Not yet specified.
+   *Closed 2026-04-18*: admitted as a transparent alias via the
+   §Type aliases section above.
 
 3. **String as a list of characters?** Haskell's `type String =
    [Char]` forces a `Char` type. Sapphire's `String` is a

@@ -355,16 +355,11 @@ to a Sapphire-side `RubyError` value. The runtime carries the
 type:
 
 ```ruby
-# Sapphire-side type per 10 §Exception model (currently named-field):
-#   data RubyError = RubyError { class_name : String
-#                              , message    : String
-#                              , backtrace  : List String }
-#
-# Once 13's M10 D-decision on 04 OQ 2 lands (sign-off pending),
-# the type respells to positional:
+# Sapphire-side type per 10 §Exception model (positional, per
+# 04 OQ 2's 2026-04-18 closure):
 #   data RubyError = RubyError String String (List String)
-# The marshalled Ruby representation below is field-order-driven
-# and works under either spelling.
+#                              -- class_name  message  backtrace
+# The marshalled Ruby representation below is field-order-driven.
 
 module Sapphire
   module Runtime
@@ -393,15 +388,12 @@ The catch is **broad within user-level Ruby errors**: every
 the rest of the non-`StandardError` `Exception` subclasses —
 **propagate past the boundary**.
 
-This creates a visible tension with 10 §Exception model, which
-reads absolutely: "Ruby exceptions are caught at the boundary,
-never propagate uncaught into Sapphire." The build-side
-interpretation is that 10's phrasing should be read as scoped to
-*user-level* Ruby exceptions (`StandardError` and below), and
-that signal-class exceptions are an unavoidable escape. This is
-not a decision this document has authority to make; 03 OQ 5
-records the tension so spec-side can resolve it (either by
-narrowing 10's wording or by widening the catch to `Exception`).
+This matches 10 §Exception model, which was narrowed
+2026-04-18 to scope its catching rule to user-level Ruby
+exceptions (`StandardError` and below); signal-class
+exceptions (`Interrupt` / `SystemExit` / `NoMemoryError` /
+`SystemStackError`) propagate by design. 03 OQ 5 records the
+history of this tension being resolved.
 
 The captured `e.class.name`, `e.message`, and `e.backtrace`
 populate the three `RubyError` fields per 10. `backtrace` may be
@@ -534,6 +526,13 @@ against a compatible version is 03 OQ 6.
    the boundary, which 10 forbids. Draft: `StandardError`.
    Deferred only as a sanity-check on the boundary; not a
    blocker.
+   *Closed 2026-04-18*: `StandardError`-only catch is the
+   agreed policy. 10 §Exception model was updated in the same
+   change to narrow its absolute "never propagate uncaught"
+   wording to user-level (`StandardError`-and-below) exceptions;
+   system-level exceptions (`Interrupt`, `SystemExit`,
+   `NoMemoryError`, `SystemStackError`, etc.) propagate past
+   the boundary by design. The build-side tension is resolved.
 
 6. **Runtime-version verification at load.** Every generated
    file's provenance comment names the runtime version it was

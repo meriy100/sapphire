@@ -97,11 +97,14 @@ let    in     if     then   else   case   of
 module import export where  forall data
 class  instance do
 as     hiding qualified
+type
 ```
 
 `data` は文書 03 が、`class`・`instance`・`do` は文書 07（型クラス
 と higher-kinded types）が、`as`・`hiding`・`qualified` は文書 08
-（モジュール）が、いずれも下記の追加拡張条項に基づき加えた。
+（モジュール）が、`type` は文書 09（prelude）が、いずれも下記の
+追加拡張条項に基づき加えた。`type` は `type T = τ` 形の型別名の
+ため。
 
 `True` および `False` は予約語では **ない**。表層形式は通常の
 `upper_ident` と同じである。それでも字句解析器がこれらを独立したトーク

@@ -257,13 +257,24 @@ Ruby コードは raise してよい。`Ruby a` アクションが走った（M8
 による）とき、下層の Ruby コードが例外を上げたら、アクションの結
 果は成功した `a` で **なく**、Sapphire 側に露出される例外となる。
 
-契約：すべての Ruby 側例外は境界で捕捉され、Sapphire 側の
-`RubyError` 値に変換される。`RubyError` 型は本文書で次のように
-定義する：
+契約：すべての Ruby 側 **ユーザレベル例外**（`StandardError` と
+その子孫）は境界で捕捉され、Sapphire 側の `RubyError` 値に変換
+される。システムレベル例外（`SystemExit`・`Interrupt`・
+`NoMemoryError`・`SystemStackError` およびその他の非
+`StandardError` な `Exception` 子孫）は **捕捉されず** 境界を通
+り抜け、通常通り Ruby プロセスを終了させる。これは Ruby 慣習（
+`rescue => e`、すなわち `rescue StandardError` を捕捉範囲の既定
+とする）に従う。
+
+`RubyError` 型は本文書で次のように定義する：
 
 ```
-data RubyError = RubyError { class_name : String, message : String, backtrace : List String }
+data RubyError = RubyError String String (List String)
+                         -- class_name   message    backtrace
 ```
+
+（04 未解決の問い 2 の決着により位置引数のみ。フィールドの意味
+はクラス名・メッセージ・バックトレースの順。）
 
 `RubyError` は **prelude 隣接モジュール `Ruby`** に住み、
 `Prelude` と並んで暗黙にインポートされる。形が Ruby 固有であり、
@@ -271,17 +282,21 @@ data RubyError = RubyError { class_name : String, message : String, backtrace : 
 い。文書 11 はモナド型 `Ruby` と `run` 関数を同モジュールに置き、
 08 の孤児インスタンス問題を回避する。
 
-（3 フィールド記録コンストラクタは 04 レコードと 04 未解決の問い
-2 で議論された名前付きフィールドコンストラクタ形を使う。04 未解
-決の問い 2 が位置引数のみで決着した場合、`RubyError` は
-`RubyError String String (List String)` と再綴りする。）
+<!-- 04 未解決の問い 2 は 2026-04-18 に「位置引数のみ」で決着。
+     したがって上の型定義は位置引数で書いてある（名前付きフィー
+     ルドコンストラクタではない）。旧 draft で `RubyError` が名
+     前付きフィールド形になっていた場合は、利用箇所を位置引数形
+     （`RubyError class msg bt` / `case e of RubyError c m b -> ...`）
+     に更新すること。 -->
+
 
 `RubyError` がユーザコードに届く経路は文書 11 で固定される：
-`Ruby a` 型は Ruby 例外をアクションの短絡終了として扱い、文書 11
-は `run : Ruby a -> Result RubyError a` を pure 側の唯一の入口と
-して露出する。本文書は `RubyError` 型と「Ruby 例外は境界で捕捉さ
-れ、未捕捉のまま Sapphire へ伝播しない」規則のみを固定する。ユー
-ザ向けインタフェースは文書 11 が埋める。
+`Ruby a` 型は捕捉されたユーザレベル Ruby 例外をアクションの短絡
+終了として扱い、文書 11 は `run : Ruby a -> Result RubyError a`
+を pure 側の唯一の入口として露出する。本文書は `RubyError` 型と
+「ユーザレベル Ruby 例外（`StandardError` 以下）は境界で捕捉され
+る。システムレベル例外は境界を通り抜ける」という scoped な規則
+のみを固定する。ユーザ向けインタフェースは文書 11 が埋める。
 
 ## 生成 Ruby モジュールの形
 

@@ -416,6 +416,9 @@ worth the friction.
 6. **Named-field constructor patterns.** Contingent on 04 OQ 2:
    if `data` constructors gain named-field payloads, pattern
    syntax extends to `K { f = p }`. Draft is positional-only.
+   *Closed 2026-04-18*: 04 OQ 2 was decided as "no named-field
+   constructor payloads at the first implementation"; this OQ
+   collapses. Patterns remain positional.
 
 7. **Empty `case_alts`.** Should `case e of { }` be admitted for
    pedagogical completeness on uninhabited scrutinees? Draft: no.

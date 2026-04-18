@@ -124,9 +124,8 @@ parseAll (s::ss)  = do
   ns <- parseAll ss
   pure (Cons n ns)
 
--- Pure parse of a single string. Relies on a prelude primitive
--- `readInt : String -> Maybe Int` that 09's minimum set does not
--- yet ship; this example assumes it as a forthcoming addition.
+-- Pure parse of a single string. Uses `readInt` from 09's
+-- utility set (added 2026-04-18).
 parseInt : String -> Result String Int
 parseInt s = case readInt s of
   Nothing -> Err ("not an integer: " ++ s)
@@ -158,8 +157,9 @@ rubyPuts s := """
   so `Err e >>= f = Err e` short-circuits parsing on the first
   failure.
 - `parseInt` is a pure Sapphire function — no Ruby crossing.
-  It delegates to a `readInt : String -> Maybe Int` that this
-  example takes as a prelude addition. See OQ 6 below.
+  It delegates to `readInt : String -> Maybe Int`, which lives
+  in 09's prelude utility set (added 2026-04-18 per 12 OQ 6
+  closure).
 - `sumOf` uses point-free style: `foldl (+) 0` is
   `foldl (+) 0 xs`.
 - Constructors `Ok`, `Err`, `Cons`, `[]` and the literal-list
@@ -176,9 +176,8 @@ module Students
   ( topScorersByGrade )
   where
 
--- A student's score row. `type` here follows 09 OQ 2's proposed
--- Haskell-style alias syntax; 09 has not yet decided whether to
--- admit it (see Open question 4).
+-- A student's score row. Uses 09's `type T = τ` transparent
+-- alias form (09 §Type aliases, 09 OQ 2 closure).
 type Student = { name : String, grade : Int, score : Int }
 
 -- Returns the highest-scoring student per grade, as a pair list.
@@ -224,9 +223,9 @@ foldr1 f (x::xs) = foldr f x xs
 
 **Reading guide.**
 
-- `type Student = ...` is the `type` alias form proposed by 09
-  OQ 2; the alias itself is not yet normatively admitted (Open
-  question 4 flags this).
+- `type Student = ...` uses 09's transparent type-alias form
+  (09 §Type aliases); this is canonical usage as of the
+  2026-04-18 decision that closed 09 OQ 2.
 - Record field access via `s.grade` (04).
 - Pattern matching over cons / nil (06, 09 list sugar).
 - Helper functions (`addGradeIfAbsent`, `pickBetter`) are
@@ -355,12 +354,13 @@ rubyPuts s := """
   dedicated monad". A newcomer skimming just these two
   programs should see what Sapphire is for.
 
-- **Deliberate rough edges.** Example 3 uses the `type` alias
-  form (09 OQ 2, not yet normatively admitted) and a
-  non-exhaustive `foldr1` (reject per 06). These are called
-  out in the reading guide rather than silently fixed, so the
-  examples double as a "here is what the spec has not yet
-  closed" checkpoint.
+- **Deliberate rough edges.** Example 3 leaves a non-exhaustive
+  `foldr1` (reject per 06) in the code, called out in the
+  reading guide rather than silently fixed, so the examples
+  double as a "here is what the spec has not yet closed"
+  checkpoint. (Example 3's `type` alias was similar when first
+  drafted, but 09 OQ 2 closed 2026-04-18 as admit, so that
+  particular rough edge has smoothed.)
 
 - **No benchmarks, no long-running demos.** The point is that
   the spec's machinery composes end-to-end, not that it wins
@@ -409,6 +409,9 @@ rubyPuts s := """
    canonical usage; if `yes` with a different spelling (e.g.
    Elm-style `type alias`), the example's `type` keyword needs
    adjusting.
+   *Closed 2026-04-18*: 09 OQ 2 was decided as `yes` with this
+   `type T = τ` spelling (see 09 §Type aliases). Example 3 is
+   now canonical usage.
 
 5. **An all-pure example.** Example 3 is the closest, but it
    has no `main`. A program that compiles to a runnable
@@ -426,3 +429,6 @@ rubyPuts s := """
    leave the dependency visible and let the user supply their
    own `readInt`. Current draft takes (c) with an explanatory
    comment; M10's pre-freeze checklist should revisit.
+   *Closed 2026-04-18*: option (a). `readInt : String -> Maybe
+   Int` is added to 09's utility set. `readFloat` remains
+   pending on 05 OQ 1 / 07 OQ 6 (numeric-tower decision).

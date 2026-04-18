@@ -86,8 +86,8 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
 | 04-OQ1 | 行多相（拡張可能レコード） | DEFERRED-LATER | 大きな設計増分。最初の実装後に再訪。 |
-| 04-OQ2 | レコード形コンストラクタ payload | DECIDED (要反映) | **位置引数のみ** を最初の実装では採用（13 D-2）。本文書が決定記録を兼ねる。**波及：10 §Exception model の `RubyError` 定義を名前付きフィールドから `data RubyError = RubyError String String (List String)` へ再綴る必要あり**（13 §Interaction with earlier drafts）。 |
-| 04-OQ3 | レコード punning (`{ x, y }`) | DECIDED (要反映) | 認めない（13 C）。 |
+| 04-OQ2 | レコード形コンストラクタ payload | DECIDED | **位置引数のみ**。2026-04-18 user 承認、04 および 10（`RubyError`）に反映済。 |
+| 04-OQ3 | レコード punning (`{ x, y }`) | DECIDED | 認めない。2026-04-18 user 承認、04 に反映済。 |
 | 04-OQ4 | 対称的更新（フィールド追加/削除） | DEFERRED-LATER | 04-OQ1 連動。 |
 | 04-OQ5 | レコード間フィールド名衝突 | DEFERRED-IMPL | 実務上は 08 のモジュール修飾で解決。 |
 
@@ -111,7 +111,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 06-OQ3 | リストリテラルパターン | DECIDED | 09 で決着済。 |
 | 06-OQ4 | `Int`/`String` の網羅性（range） | DEFERRED-LATER | 計画しない。 |
 | 06-OQ5 | `let` のパターン束縛 | DEFERRED-IMPL | 実装中に手触りで評価。 |
-| 06-OQ6 | 名前付きフィールドコンストラクタパターン | DECIDED (要反映) | 04-OQ2 の副次効果で閉じる。 |
+| 06-OQ6 | 名前付きフィールドコンストラクタパターン | DECIDED | 04-OQ2 の副次効果。2026-04-18 反映済。 |
 | 06-OQ7 | 空 `case_alts` | DEFERRED-LATER | 稀なコーナーケース。 |
 
 ### 07 Type classes + HKT (MTC)
@@ -145,7 +145,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
 | 09-OQ1 | タプル構文 | DEFERRED-LATER | 構造的レコードで代替可能。優先度低。 |
-| 09-OQ2 | 型別名 `type T = τ` | DECIDED (要反映) | **admit** を最初の実装から（13 D-2）。02 キーワードに `type` を追加。 |
+| 09-OQ2 | 型別名 `type T = τ` | DECIDED | **admit**（透明な別名）。2026-04-18 user 承認、09 §Type aliases と 02 予約語に反映済。 |
 | 09-OQ3 | `String` を `[Char]` に分解 | DEFERRED-LATER | `String` は opaque。`Char` は無し（09-OQ6 連動）。 |
 | 09-OQ4 | `Num` vs Int 専用 | DEFERRED-LATER | 01-OQ4 / 07-OQ6 連動。 |
 | 09-OQ5 | `IO` / 具体 Ruby monad retype | DECIDED | 11 で決着済（`Ruby a` 型）。 |
@@ -175,7 +175,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 11-OQ3 | ストリーミング | DEFERRED-LATER | 同上。 |
 | 11-OQ4 | 例外クラス粒度 | DEFERRED-LATER | 拡張。 |
 | 11-OQ5 | Ruby 側共有状態の脱出口 | DEFERRED-LATER | ユーザフィードバック待ち。 |
-| 11-OQ6 | prelude としての `join` | DECIDED (要反映) | `join = (>>= id)` を 09 prelude に追加（13 C）。 |
+| 11-OQ6 | prelude としての `join` | DECIDED | `join : Monad m => m (m a) -> m a` を 09 prelude に追加済（2026-04-18）。 |
 | 11-OQ7 | 生成 Ruby クラスのスレッド意味論 | DEFERRED-IMPL | 実装詳細。 |
 
 ### 12 Example programs
@@ -185,17 +185,17 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 12-OQ1 | 長時間 Ruby 例題 | DEFERRED-IMPL | 実装フェーズで追加。 |
 | 12-OQ2 | 多相を要求する例 | DEFERRED-IMPL | 同上。 |
 | 12-OQ3 | Ruby → Sapphire 呼び出し例 | DEFERRED-IMPL | 同上。 |
-| 12-OQ4 | 例 3 の `type` 別名 | DECIDED | 09-OQ2 と連動して admit（13 D）。 |
+| 12-OQ4 | 例 3 の `type` 別名 | DECIDED | 09-OQ2 と連動して admit。2026-04-18 反映済。 |
 | 12-OQ5 | 完全に純粋な例題 | DEFERRED-IMPL | 実装フェーズ。 |
-| 12-OQ6 | `readInt` prelude 依存 | DECIDED (要反映) | `readInt : String -> Maybe Int` を 09 に追加（13 D-3）。`readFloat` は 01-OQ4 着地後。 |
+| 12-OQ6 | `readInt` prelude 依存 | DECIDED | `readInt : String -> Maybe Int` を 09 に追加済（2026-04-18）。`readFloat` は 01-OQ4 着地後。 |
 
 ### 13 Spec freeze review
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| 13-OQ1 | `docs/impl/` 導入タイミング | OPEN | ホスト言語選定に着手する時点で作成する。それまでは空ディレクトリとして置かず、そもそも作らない方針。 |
+| 13-OQ1 | `docs/impl/` 導入タイミング | DECIDED | ホスト言語選定に着手する時点で初めて作成する（lazy 作成）。2026-04-18 user 承認。 |
 | 13-OQ2 | どの draft を "final" 昇格させるか | DEFERRED-IMPL | 最初のコンパイラが通して受理できてから検討。 |
-| 13-OQ3 | `docs/roadmap.md` の扱い | OPEN | spec-first 終了でアーカイブするか、次フェーズも生かすか未決。今は生かす方針（T1/B1 エントリが既に追記されている）。 |
+| 13-OQ3 | `docs/roadmap.md` の扱い | DECIDED | living document として次フェーズも維持。2026-04-18 user 承認。spec-first の節は「完了」マークを付けるが削除はしない。 |
 
 ---
 
@@ -234,7 +234,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | B-03-OQ2 | `Marshal` の型引数エンコード | DEFERRED-IMPL | 実装詳細。 |
 | B-03-OQ3 | `:=` スニペット本体: literal `proc` vs `eval` | DEFERRED-IMPL | パフォーマンス＆安全性の trade-off。 |
 | B-03-OQ4 | `run` ごとのスレッド fresh vs pool | DEFERRED-IMPL | 11 §Execution model 範囲内で実装が選択。 |
-| B-03-OQ5 | **`StandardError` のみ捕捉 vs `Exception` まで** | **OPEN** | **spec 10 §Exception model の絶対表現と tension**。spec 側で 10 を狭める (StandardError 限定) か、ランタイムを広げるかの判断が必要。**ユーザ判断待ち**。 |
+| B-03-OQ5 | **`StandardError` のみ捕捉 vs `Exception` まで** | DECIDED | `StandardError` のみ捕捉で確定。10 §Exception model の文言を同時に narrow（システムレベル例外は境界を通り抜ける）。2026-04-18 user 承認、両文書に反映済。 |
 | B-03-OQ6 | ランタイムバージョン検査の load 時 hook | DEFERRED-IMPL | 実装詳細。 |
 | B-03-OQ7 | 非 Sapphire Ruby からの公開 API | DEFERRED-IMPL | ホスト統合の流儀による。 |
 
@@ -284,9 +284,9 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 | T-03-1 | 章 3 (パターンマッチ) | 双方向型付け判定記法 `Γ ⊢ p ⇐ τ ⊣ Γ'` を入門文脈で見せるのが重い。実装者向け付録へ切り出す余地 | DEFERRED-LATER | 06 の規範的規則はそのまま、tutorial のみ抽象度を下げる方向。 |
 | T-04-1 | 章 4 | タプル不在（09-OQ1）が説明コスト | DEFERRED-LATER | 09-OQ1 と同一。実装後に再評価。 |
 | T-04-2 | 章 4 | `type` 別名不在が説明コスト | DECIDED (要反映) | 09-OQ2 の「admit」で解消見込み。 |
-| T-05-1 | 章 5 (型クラス) | Functor → Applicative → Monad の五本柱が同時立ち上げで入門者に重い | OPEN | `Applicative` を表面から薄くするなどの軽量化は 07 の仕様修正を伴う。user と相談して方向を決める。 |
-| T-05-2 | 章 5 | HKT (`Functor f` の `f`) で読者が詰まる | OPEN | 07 §Kind system を引かずに済ませる導入を検討。tutorial 側の整流でいけるなら仕様は触らない。 |
-| T-06-1 | 章 6 (Ruby monad) | `Monad` の比喩が `Maybe`/`Result` と `Ruby` で別物になり摩擦 | OPEN | 11 の意味論自体を変える必要はなさそうだが、`do` の脱糖説明は tutorial で強化。 |
+| T-05-1 | 章 5 (型クラス) | Functor → Applicative → Monad の五本柱が同時立ち上げで入門者に重い | DECIDED | 2026-04-18：(C) 仕様維持、tutorial 章 5 を具体→抽象の順序に書き直す方針。実作業は T2 トラックで別途。 |
+| T-05-2 | 章 5 | HKT (`Functor f` の `f`) で読者が詰まる | DECIDED | 同上（C）。HKT の概念導入は発展篇に隔離する方向で tutorial 改訂する。 |
+| T-06-1 | 章 6 (Ruby monad) | `Monad` の比喩が `Maybe`/`Result` と `Ruby` で別物になり摩擦 | DECIDED | 同上（C）。11 の意味論は触らず、tutorial での `do` 脱糖説明を強化する方向で T2 対応。 |
 | T-02..06 | 全般 | `仕様への気付き` 節を持つ章が 5 本 | WATCHING | チュートリアルが改訂されるたびに気付きをここへ集約する運用。 |
 
 ---
@@ -310,18 +310,14 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 
 ## 5. 直近で user 判断が要るもの
 
-`OPEN` のうち、直近で user 判断が要る項目を再掲：
+2026-04-18 の対話で 7 件の OPEN を処理し、§1〜§3 に反映済。現在
+残っている **OPEN** は無し。
 
-- **B-03-OQ5** — `StandardError` のみ捕捉 vs `Exception` まで
-  （spec 10 の絶対表現とビルド側の現実的方針の tension）。
-- **T-05-1** — 章 5 の重さが 07 MTC の仕様軽量化を要求するか。
-- **T-05-2** — HKT の入門摩擦を仕様側で薄めるか、tutorial 側の
-  整流で済ますか。
-- **T-06-1** — `Monad` 比喩の摩擦は tutorial 改訂で吸収可能か、
-  11 の意味論に踏み込むか。
-- **13-OQ1** — `docs/impl/` の導入タイミング。
-- **13-OQ3** — `docs/roadmap.md` を spec-first 終了でアーカイブ
-  するか。
+残る「要反映」系タスク：
 
-その他、13 で立てた D 決定（要反映）項目は合意を取って仕様本文へ
-反映する段取りが必要。
+- 13 で決定済みだがまだ本文反映が完了していない C 項目：
+  **02-OQ4 / 02-OQ5 / 05-OQ6 / 08-OQ1 / 08-OQ2 / 08-OQ5 /
+  10-OQ1 / 10-OQ3**。いずれも小さな chore なので、別途まとめて
+  反映する予定（blocker ではない）。
+
+新しく OPEN が発生したらここで列挙する運用。

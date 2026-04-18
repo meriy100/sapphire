@@ -123,9 +123,8 @@ parseAll (s::ss)  = do
   ns <- parseAll ss
   pure (Cons n ns)
 
--- Pure parse of a single string. Relies on a prelude primitive
--- `readInt : String -> Maybe Int` that 09's minimum set does not
--- yet ship; this example assumes it as a forthcoming addition.
+-- Pure parse of a single string. Uses `readInt` from 09's
+-- utility set (added 2026-04-18).
 parseInt : String -> Result String Int
 parseInt s = case readInt s of
   Nothing -> Err ("not an integer: " ++ s)
@@ -157,8 +156,9 @@ rubyPuts s := """
   ナドであり、`Err e >>= f = Err e` が最初の失敗でパースを短絡
   させる。
 - `parseInt` は純粋な Sapphire 関数 — Ruby を跨がない。
-  `readInt : String -> Maybe Int` に委譲しており、本例はそれを
-  prelude への追加として前提にする。下の OQ 6 参照。
+  `readInt : String -> Maybe Int` に委譲する。`readInt` は
+  09 prelude の utility 集合に収められている（2026-04-18、12
+  未解決の問い 6 の決着で追加）。
 - `sumOf` は point-free：`foldl (+) 0` は `foldl (+) 0 xs`。
 - コンストラクタ `Ok`・`Err`・`Cons`・`[]` と 09 のリストリテ
   ラル脱糖がすべて現れる。
@@ -173,9 +173,8 @@ module Students
   ( topScorersByGrade )
   where
 
--- A student's score row. `type` here follows 09 OQ 2's proposed
--- Haskell-style alias syntax; 09 has not yet decided whether to
--- admit it (see Open question 4).
+-- A student's score row. Uses 09's `type T = τ` transparent
+-- alias form (09 §Type aliases, 09 OQ 2 closure).
 type Student = { name : String, grade : Int, score : Int }
 
 -- Returns the highest-scoring student per grade, as a pair list.
@@ -221,9 +220,8 @@ foldr1 f (x::xs) = foldr f x xs
 
 **読解ガイド。**
 
-- `type Student = ...` は 09 未解決の問い 2 が提案する `type` 別
-  名形。別名自体は規範としてまだ認められていない（未解決の問い 4
-  が flag する）。
+- `type Student = ...` は 09 の透明な型別名形（09 §型別名）。
+  2026-04-18 の 09 OQ 2 決着により canonical な用法となった。
 - `s.grade` によるレコードフィールドアクセス（04）。
 - cons / nil 上のパターンマッチ（06、09 のリスト糖衣）。
 - 補助関数（`addGradeIfAbsent`・`pickBetter`）は関数内ではなくト
@@ -346,10 +344,11 @@ rubyPuts s := """
   モナドで持つ純粋関数コア」。この 2 プログラムをざっと読めば新
   参者は Sapphire の目的を把握できる。
 
-- **意図的な荒削り。** 例 3 は `type` 別名形（09 未解決の問い 2、
-  規範としてはまだ認められていない）と非網羅的な `foldr1`（06 で
-  拒絶される）を使う。読解ガイドで明示するが黙って直さない。例題
-  は「仕様がまだ閉じていない箇所」のチェックポイントも兼ねる。
+- **意図的な荒削り。** 例 3 は非網羅的な `foldr1`（06 で拒絶され
+  る）を残しており、読解ガイドで明示するが黙って直さない。例題は
+  「仕様がまだ閉じていない箇所」のチェックポイントも兼ねる
+  （例 3 の `type` 別名も当初はこの扱いだったが、2026-04-18 に
+  09 OQ 2 が admit で決着したため、この荒削りは解消した）。
 
 - **ベンチマークなし、長時間実行デモなし。** 焦点は仕様機構が
   end-to-end で合成することであって、速度競争に勝つことではない。
@@ -390,6 +389,8 @@ rubyPuts s := """
    開するよう書き直す必要がある。この綴りで `yes` で着地すれば
    canonical な用法になる。別の綴り（例：Elm 風 `type alias`）で
    `yes` なら、例の `type` キーワードを調整する。
+   *2026-04-18 決定*：09 OQ 2 は `yes`（`type T = τ` 綴り、09
+   §型別名 参照）で着地。例 3 は canonical な用法となった。
 
 5. **完全に純粋な例。** 例 3 が最も近いが `main` を持たない。走
    らせ可能な Ruby モジュールにコンパイルされ、単一の `Ruby` アク
@@ -405,3 +406,6 @@ rubyPuts s := """
    せる。(c) 依存を可視のまま残し、ユーザが自前 `readInt` を供給す
    る。現 draft は (c) を取り注釈で補う。M10 の凍結前チェックリ
    ストで再訪する。
+   *2026-04-18 決定*: (a)。`readInt : String -> Maybe Int` を
+   09 の utility 集合に追加した。`readFloat` は 05 未解決の問い
+   1 / 07 未解決の問い 6（数値タワー決定）を待つ。
