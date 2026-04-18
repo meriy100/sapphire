@@ -93,8 +93,11 @@ The following lowercase words are reserved and cannot appear as
 
 ```
 let    in     if     then   else   case   of
-module import export where  forall
+module import export where  forall data
 ```
+
+`data` was added by document 03 under the additive-growth clause
+below.
 
 `True` and `False` are **not** keywords. Their surface form is a
 plain `upper_ident`. Whether the lexer nonetheless recognizes them

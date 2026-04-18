@@ -163,6 +163,9 @@ be implementable by algorithm W (or J) without surprises.
    generalize *and* allow self-reference, or should recursion require a
    distinct `let rec` form? (Current draft is silent on self-reference; the
    (Let) rule as written does not admit `e₁` mentioning `x`.)
+   *Closed by document 03* (data types): `let` is implicitly recursive;
+   document 03 replaces this document's (Let) rule. This open question
+   is retained here for historical context and may be revisited at M10.
 2. **Top-level signatures: required or optional?** A required-signatures
    policy simplifies error messages and principal-type questions at module
    boundaries. An optional-signatures policy is friendlier but interacts

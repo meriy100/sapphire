@@ -24,6 +24,8 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
 
 - **01 Core expression language** — draft 済み (`docs/spec/01-core-expressions.md`)
 - **02 Lexical syntax** — draft 済み (`docs/spec/02-lexical-syntax.md`)
+- **M1 データ型 (03 Data types)** — draft 済み (`docs/spec/03-data-types.md`)。
+  01 未解決の問い 1（`let` 自己参照）は本文書で「暗黙再帰」として決着。
 
 ## マイルストーン
 

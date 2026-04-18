@@ -94,8 +94,10 @@ upper_ident ::= [A-Z]   [A-Za-z0-9_']*       -- 型コンストラクタ、
 
 ```
 let    in     if     then   else   case   of
-module import export where  forall
+module import export where  forall data
 ```
+
+`data` は文書 03 が下記の追加拡張条項に基づき加えた。
 
 `True` および `False` は予約語では **ない**。表層形式は通常の
 `upper_ident` と同じである。それでも字句解析器がこれらを独立したトーク
