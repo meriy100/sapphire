@@ -73,8 +73,9 @@ rubyUpper s := "s.upcase"
 - Sapphire 側からは `rubyUpper "hello"` のように呼べる関数。
 - 呼ぶと `Ruby String` 型の値（保留された計算）が返る。
 - その計算を `run` すると、Ruby インタプリタが `s = "hello"` の
-  状態で `s.upcase` を評価し、結果の `"HELLO"` が `String` として
-  Sapphire に戻ってくる。
+  状態で `s.upcase` を評価する。成功すれば `Ok "HELLO"` が、Ruby
+  側で例外が飛んでいれば `Err e` が Sapphire 側に返る（詳しくは
+  下の「実行: `run`」節）。
 
 ### 複数行の Ruby コード
 
@@ -247,8 +248,10 @@ rubyPuts s := """
 実行されるとき (`run main`) は:
 
 1. Ruby スレッド起動。
-2. `puts "Hello, Sapphire!"` を実行（一つ目の `:=` スニペット）。
-3. `puts "Hello, world!"` を実行（二つ目）。
+2. `puts "Hello, Sapphire!"` を実行（`rubyPuts` の 1 回目の
+   呼び出し）。
+3. `puts "Hello, world!"` を実行（`rubyPuts` の 2 回目の
+   呼び出し。同じ `:=` 束縛を別の引数で再利用している）。
 4. 例外なく終わったので `Ok {}` を返す。
 
 文書 10 §Generated Ruby module shape のルールに従い、Sapphire
@@ -336,18 +339,32 @@ main : Ruby {}
 main = do
   res <- get "https://example.com/"
   case res of
-    Ok body          -> rubyPuts ("got " ++ show (stringLength body))
-    Err httpErr      -> rubyPuts (explain httpErr)
+    Ok body -> do
+      n <- stringLength body
+      rubyPuts ("fetched " ++ show n ++ " bytes")
+    Err httpErr ->
+      rubyPuts (explain httpErr)
 
 explain : HttpError -> String
 explain (NetworkError m)    = "network error: " ++ m
 explain (StatusError c msg) = "HTTP " ++ show c ++ ": " ++ msg
 explain (DecodeError m)     = "decode error: " ++ m
+
+-- String の長さは Ruby 側に聞く（09 の prelude には文字列長が
+-- 入っていないので、Ruby スニペットで `bytesize` を呼ぶ）
+stringLength : String -> Ruby Int
+stringLength s := """
+  s.bytesize
+"""
 ```
 
 `do` の中で `<-` で `Result HttpError String` を受け、`case` で
-内側を分解する。`Ruby` の例外は更にもう一段外側で `run` が
-受け止めるので、ここでは見えない。
+内側を分解する。`Ok` アームが更に `do` を開いているのは、
+`stringLength body` が **`Ruby Int` であって `Int` ではない** から
+（`String -> Ruby Int`）。`<-` で剥がして `Int` の `n` を得てから
+`show n` に渡す。`Ruby a` から `a` に降りる唯一の経路は `<-` か
+`run` の二択 — この章の冒頭からの原則である。`Ruby` の例外は更に
+もう一段外側で `run` が受け止めるので、ここでは見えない。
 
 ## まとめ
 
