@@ -275,14 +275,19 @@ at this layer; see 01 OQ 2, to be closed in M4 (modules).
   this document's `data` mechanism; they differ only on whether
   `Bool` specifically goes through it.
 
-- **Higher-kinded types are deferred.** A `data` declaration with `n`
+- **Higher-kinded types.** A `data` declaration with `n`
   parameters forces its type constructor to appear with exactly `n`
-  arguments. A partially applied `T τ₁ ... τⱼ` for `j < n` is not a
-  well-formed type. Higher-kinded polymorphism, typeclasses / traits
-  over type constructors, and `Functor`-shaped abstractions are all
-  postponed. Whether Sapphire follows Elm (kinds beyond `*` are
-  never admitted) or relaxes this is a later decision tied to how
-  ad-hoc overloading lands (01 OQ 5, 02 OQ 3).
+  arguments in this document's rules. Partial application of type
+  constructors is not admitted at the layer of this document. That
+  constraint is **lifted by document 07** (type classes and
+  higher-kinded types): under 07's kind system, an n-parameter
+  `data` declaration gives its type constructor kind
+  `κ₁ -> ... -> κₙ -> *`, and partial application becomes a
+  first-class notion whenever a quantified type variable of
+  matching higher kind is in scope (`Monad m`, `Functor f`, etc.).
+  Read this bullet as: "this document alone does not introduce
+  higher-kinded polymorphism; document 07 does, and nothing in
+  this document blocks it."
 
 - **No implicit quantification.** `data T a = Foo b` is rejected: a
   type variable `b` appearing on the right-hand side without being

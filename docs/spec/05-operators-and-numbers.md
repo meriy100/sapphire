@@ -47,6 +47,7 @@ op     ::= '+' | '-' | '*' | '/' | '%'
          | '&&' | '||'
          | '++'
          | '::'
+         | '>>=' | '>>'
 ```
 
 The `op` set above is a **strict subset** of document 02's `op`
@@ -85,6 +86,7 @@ tighter than unary minus. `f 3 + g 5` parses as `(f 3) + (g 5)`.
 | 4          | none          | `==`  `/=`  `<`  `>`  `<=`  `>=` | `Int -> Int -> Bool`  |
 | 3          | right         | `&&`                    | `Bool -> Bool -> Bool`         |
 | 2          | right         | `\|\|`                  | `Bool -> Bool -> Bool`         |
+| 1          | left          | `>>=`  `>>`             | monadic, see document 07 †     |
 
 `::` (asterisked in the table) reserves its precedence and type at
 this layer; the `List` type and the actual binding are introduced
@@ -93,6 +95,13 @@ in an expression. This asymmetry with pipe operators (05 OQ 5,
 which reserves no precedence entry yet) is deliberate: pipe
 operators have not yet been promised, whereas list cons is a
 near-certain M6 export.
+
+`>>=` and `>>` (dagger †) are added as part of document 07's
+`Monad` class. Their precise schemes are
+`∀ m a b. Monad m => m a -> (a -> m b) -> m b` (for `>>=`) and
+`∀ m a b. Monad m => m a -> m b -> m b` (for `>>`). Document 05
+fixes their token, tier, and associativity; document 07 binds
+them to the `Monad` class machinery.
 
 Function application has effective precedence tighter than tier 9
 (unary minus); it is shown for comparison.
@@ -258,6 +267,13 @@ pattern-level type annotation in typical Sapphire programs.
    runtime universal-equality primitive that silently returned
    `False` on function values would be a footgun. Draft: monomorphic
    on `Int`.
+   *Closed by document 07*: yes, via the `Eq` and `Ord` type
+   classes. Document 05's Int-only types for the equality and
+   ordering operators are retained as the prelude instance
+   `Eq Int` / `Ord Int`; the general scheme is `Eq a => a -> a ->
+   Bool` / `Ord a => ...`. Types containing function arrows are
+   excluded from `Eq` (Elm's rule, formalised at the class-instance
+   level).
 
 3. **User-declarable operator fixity.** Admit `infixl N` / `infixr N`
    declarations (Haskell)? Draft is Elm-style fixed. A yes answer

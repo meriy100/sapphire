@@ -94,10 +94,12 @@ The following lowercase words are reserved and cannot appear as
 ```
 let    in     if     then   else   case   of
 module import export where  forall data
+class  instance do
 ```
 
 `data` was added by document 03 under the additive-growth clause
-below.
+below. `class`, `instance`, and `do` were added by document 07
+(type classes and higher-kinded types) under the same clause.
 
 `True` and `False` are **not** keywords. Their surface form is a
 plain `upper_ident`. Whether the lexer nonetheless recognizes them
@@ -192,13 +194,15 @@ user-level operators. They are excluded from the `op` nonterminal
 above.
 
 ```
-=     ->    =>    :     ::    :=    |     .
+=     ->    <-    =>    :     ::    :=    |     .
 \     @
 ```
 
 - `=` is the definition form (used in `decl` and inside `let`).
 - `->` is the function arrow (in types and in lambdas).
-- `=>` is reserved for a future constraint / type-class arrow.
+- `<-` is reserved for `do`-notation monadic bind (document 07).
+- `=>` is the constraint / type-class arrow in schemes
+  (document 07).
 - `:` is the type-annotation separator (see document 01,
   `decl ::= IDENT ':' type`).
 - `::` is reserved (candidates: list cons, pattern-level type
@@ -236,7 +240,9 @@ column comparisons never have a chance to fire.
 Informal rule, to be made fully precise in a later document once
 `where` and `case` exist:
 
-- A *block-opening keyword* is `let`, `where`, or `of`.
+- A *block-opening keyword* is `let`, `where`, `of`, or `do`.
+  `do` was added by document 07 (type classes / `do` notation)
+  under the additive-growth clause of §Keywords above.
 - If the first non-whitespace token after a block-opening keyword is
   not `{`, it opens a new block; the column of that first token is
   the block's **reference column** `c`.

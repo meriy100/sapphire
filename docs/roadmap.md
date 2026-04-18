@@ -54,6 +54,12 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   (`docs/spec/06-pattern-matching.md`)。`case ... of`、パターン文法、
   網羅性・冗長性。03 OQ5 決着、05 の pattern-level type annotation
   を `(pat : type)` で確定、01 OQ3 を部分的に対処（残余は M6 依存）。
+- **MTC 型クラスと higher-kinded types (07 Type classes)** — draft 済み
+  (`docs/spec/07-type-classes.md`)。種体系（`*` と `κ -> κ`）、単一
+  パラメータ型クラス、Haskell 98 形インスタンス、重複なし・孤児なし、
+  標準クラス `Eq`/`Ord`/`Show`/`Functor`/`Applicative`/`Monad`、
+  `do` 記法。03 の「高階種は後送り」、05 OQ2（多相等価）を決着。
+  02 に `<-` 予約と `class`/`instance`/`do` キーワード追加。
 
 ## マイルストーン
 
