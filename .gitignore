@@ -4,3 +4,5 @@
 /vendor/bundle/
 .devcontainer/.env
 .claude/settings.local.json
+.worktree/*
+!.worktree/.keep

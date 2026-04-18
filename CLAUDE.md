@@ -33,9 +33,23 @@ this section with the user.
   no `git push --force`, no `rm -rf` outside this repo, no remote
   writes to systems not explicitly in scope. `bypassPermissions` mode
   removes the approval prompts, not the rule.
-- Do not commit files listed in `.gitignore` (`/target`, `.sapphire/`,
-  `.bundle/`, `vendor/bundle/`, `.devcontainer/.env`,
-  `.claude/settings.local.json`).
+- Do not commit files listed in `.gitignore`. That file is the
+  single source of truth for what is excluded from history — do not
+  mirror its contents here.
+
+## Parallel work with git worktrees
+
+- Create git worktrees only under `.worktree/<name>` at the
+  repository root. No temp directories, no sibling directories of
+  the repo.
+- Do not launch sub-agents in any mode that creates a worktree
+  outside `.worktree/`. In particular, do not pass
+  `isolation: "worktree"` to the Agent tool. If a sub-agent
+  genuinely needs an isolated checkout, create it first with
+  `git worktree add .worktree/<name> <ref>` and hand the agent
+  that path explicitly in the prompt.
+- Remove a worktree with `git worktree remove .worktree/<name>`,
+  not `rm -rf`.
 
 ## Writing conventions
 
