@@ -26,6 +26,8 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
 - **02 Lexical syntax** — draft 済み (`docs/spec/02-lexical-syntax.md`)
 - **M1 データ型 (03 Data types)** — draft 済み (`docs/spec/03-data-types.md`)。
   01 未解決の問い 1（`let` 自己参照）は本文書で「暗黙再帰」として決着。
+- **M2 レコード (04 Records)** — draft 済み (`docs/spec/04-records.md`)。
+  クローズドな構造的レコードを draft の第一候補として採用。行多相は OQ。
 
 ## マイルストーン
 

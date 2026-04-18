@@ -205,8 +205,9 @@ above.
   annotation); the choice is made in a later document.
 - `:=` is reserved for future assignment-like forms (e.g. Ruby
   interop bindings). It is not introduced in this layer.
-- `|` is reserved for data-constructor alternation and case-pattern
-  alternatives.
+- `|` is reserved for data-constructor alternation, case-pattern
+  alternatives, and record-update syntax (`{ r | f = v }`, document
+  04).
 - `.` is reserved for qualified names (`Mod.name`), record field
   access, and the scheme-notation `forall TVAR* '.' type` from
   document 01; the overlap between the first two is resolved in the
