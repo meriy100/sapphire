@@ -60,6 +60,11 @@ unless the module declares an explicit empty prelude import
 (`import Prelude ()`, see 08). The explicit form shadows the
 implicit one — the two never occur together.
 
+Document 10 (Ruby interop) introduces a second implicitly
+imported module, `Ruby`, under the same rule. Future documents
+that add implicitly imported modules follow the same pattern —
+the implicit-import set is not fixed at 09.
+
 The rest of this document describes `Prelude`'s contents; the
 export list above is filled in by §Module export list at the end.
 

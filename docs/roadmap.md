@@ -71,6 +71,12 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   `Result`・`List`）、リスト構文（`[]`・`[x, y, z]`・`::`）、標準クラ
   スの prelude インスタンス、基本 utility 関数。02 OQ1 と 01 OQ3 を
   最終決着（`Bool` は ADT、`if` は `case` の糖衣）。
+- **M7 Ruby インタロップ (10 Ruby interop)** — draft 済み
+  (`docs/spec/10-ruby-interop.md`)。`:=` による Ruby 埋め込み、三連
+  引用符文字列リテラル、データモデル（Int/String/Bool/record/ADT/
+  List/関数）、タグ付きハッシュ ADT 表現、`RubyError` 型、生成
+  Ruby モジュール形（`Sapphire::M::N::P` クラス階層）。モナド意味
+  論は M8 に委譲（`RubyM` を opaque 型として扱う）。
 
 ## マイルストーン
 
