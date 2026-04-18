@@ -55,3 +55,26 @@ this section with the user.
   approval on every step, but do surface material direction changes.
 - When spec decisions are made in conversation, persist them in
   `docs/spec/`; the chat is not the source of truth.
+
+## Review flow
+
+- After completing non-trivial work, the main Claude session invokes
+  the `reviewer` agent as a subagent on the produced artifact, before
+  treating the work as done. "Non-trivial" covers: any new file, any
+  new or materially changed rule in an instruction file, any change
+  to the normative content of a spec document, and any code change
+  beyond renames or formatting. Typo fixes, heading renames, and
+  formatting-only tweaks do not count and do not require review.
+- For each item the reviewer raises, judge it: if it is a valid
+  point, apply the fix; if it is not, note briefly why and move on.
+- After applying fixes, re-invoke the `reviewer` agent on the updated
+  artifact. Repeat up to a total of **three** review iterations
+  (initial review + up to two follow-ups).
+- Stop the loop earlier as soon as the reviewer returns
+  `Verdict: approve` or `Verdict: approve with suggestions`. Three
+  iterations is the ceiling, not a target.
+- If must-fix items remain unresolved after three iterations, stop
+  the loop and surface the remaining items to the user instead of
+  continuing.
+- When a commit is requested, let the review flow settle first;
+  uncommitted review iterations should not be frozen into history.
