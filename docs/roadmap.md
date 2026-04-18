@@ -90,6 +90,13 @@ note であり、`CLAUDE.md` writing conventions の dual-language 対象外
   ード処理（純粋）、HTTP 取得と分類（2 モジュール・Ruby 相互運用・
   Result エラー処理）。各例題に読解ガイド付き、仕様未決箇所も可
   視化。
+- **M10 仕様凍結レビュー (13 Spec freeze review)** — draft 済み
+  (`docs/spec/13-spec-freeze-review.md`)。01〜12 の状態要約、全
+  OQ を C/K/L/D に分類した統合表、文書間整合チェック（予約語・
+  演算子表・予約句読点・暗黙インポート）、`CLAUDE.md` phase-
+  conditioned rules の次フェーズ向け改訂案、spec-first フェーズ
+  の凍結判断。D 決定（04 OQ2、09 OQ2、12 OQ6）と C 修正はユーザ
+  サインオフ後の follow-up commit で着地。
 
 ## マイルストーン
 
