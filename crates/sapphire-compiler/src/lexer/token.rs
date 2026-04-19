@@ -60,7 +60,6 @@ pub enum TokenKind {
     // --- Reserved words (spec 02 §Keywords) --------------------------
     Module,
     Import,
-    Exposing,
     Hiding,
     As,
     Qualified,
@@ -148,7 +147,6 @@ impl fmt::Display for TokenKind {
             TokenKind::Underscore => write!(f, "Underscore"),
             TokenKind::Module => write!(f, "Module"),
             TokenKind::Import => write!(f, "Import"),
-            TokenKind::Exposing => write!(f, "Exposing"),
             TokenKind::Hiding => write!(f, "Hiding"),
             TokenKind::As => write!(f, "As"),
             TokenKind::Qualified => write!(f, "Qualified"),

@@ -363,7 +363,6 @@ impl<'a> Lexer<'a> {
         let kind = match text.as_str() {
             "module" => TokenKind::Module,
             "import" => TokenKind::Import,
-            "exposing" => TokenKind::Exposing,
             "hiding" => TokenKind::Hiding,
             "as" => TokenKind::As,
             "qualified" => TokenKind::Qualified,

@@ -92,11 +92,11 @@ fn upper_ident_accepted() {
 
 #[test]
 fn reserved_words_all_recognised() {
-    // Covers every word listed in spec 02 §Keywords. Words that
-    // do not yet appear in any production (`forall`, `qualified`,
-    // `export`) are still lexed as their reserved kind so the
-    // "cannot appear as lower_ident" invariant is honoured.
-    let src = "module import exposing hiding as qualified export \
+    // Covers every word listed in spec 02 §Keywords (20 words).
+    // Words that do not yet appear in any production (`forall`,
+    // `qualified`, `export`) are still lexed as their reserved
+    // kind so the "cannot appear as lower_ident" invariant holds.
+    let src = "module import hiding as qualified export \
                data type class instance where let in if then else \
                case of do forall";
     let toks = tokenize(src).unwrap();
@@ -105,7 +105,6 @@ fn reserved_words_all_recognised() {
         vec![
             TokenKind::Module,
             TokenKind::Import,
-            TokenKind::Exposing,
             TokenKind::Hiding,
             TokenKind::As,
             TokenKind::Qualified,
@@ -125,6 +124,17 @@ fn reserved_words_all_recognised() {
             TokenKind::Do,
             TokenKind::Forall,
         ]
+    );
+}
+
+#[test]
+fn exposing_is_lower_ident_not_reserved() {
+    // spec 02 §Keywords does not list `exposing`. Guard against
+    // accidental re-promotion to a reserved word.
+    let toks = tokenize("exposing").unwrap();
+    assert_eq!(
+        content_kinds(&toks),
+        vec![TokenKind::LowerIdent("exposing".to_string())]
     );
 }
 
@@ -556,17 +566,18 @@ fn non_ascii_inside_string_is_fine() {
 
 #[test]
 fn realistic_module_snippet() {
-    let src = "module Main exposing (main)\n\nmain = putStrLn \"Hello!\"\n";
+    // spec 08 module syntax: `module Name (exports) where`.
+    let src = "module Main (main) where\n\nmain = putStrLn \"Hello!\"\n";
     let toks = tokenize(src).unwrap();
     assert_eq!(
         content_kinds(&toks),
         vec![
             TokenKind::Module,
             TokenKind::UpperIdent("Main".into()),
-            TokenKind::Exposing,
             TokenKind::LParen,
             TokenKind::LowerIdent("main".into()),
             TokenKind::RParen,
+            TokenKind::Where,
             TokenKind::LowerIdent("main".into()),
             TokenKind::Equals,
             TokenKind::LowerIdent("putStrLn".into()),
