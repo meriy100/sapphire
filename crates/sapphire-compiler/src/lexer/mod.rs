@@ -430,6 +430,12 @@ impl<'a> Lexer<'a> {
 
     fn scan_string(&mut self) -> Result<Token, LexError> {
         let start = self.pos;
+        // Detect the triple-quoted form: `"""..."""` admits bare
+        // line feeds and is terminated only by an unescaped `"""`
+        // (spec 10 §Triple-quoted string literals).
+        if self.src.get(self.pos + 1) == Some(&b'"') && self.src.get(self.pos + 2) == Some(&b'"') {
+            return self.scan_triple_string(start);
+        }
         self.pos += 1; // opening `"`
         let mut buf = String::new();
         loop {
@@ -461,6 +467,65 @@ impl<'a> Lexer<'a> {
                     let end = (self.pos + n).min(self.src.len());
                     let slice = &self.src[self.pos..end];
                     // Safety: source is valid UTF-8.
+                    let s = std::str::from_utf8(slice).expect("source is UTF-8");
+                    buf.push_str(s);
+                    self.pos = end;
+                }
+            }
+        }
+    }
+
+    /// Scan a triple-quoted string literal `"""..."""`.
+    ///
+    /// Called only after the caller has verified that `src[pos..pos+3]`
+    /// is `"""`. Bare line feeds are admitted and preserved; the
+    /// same escape rules as single-line strings apply (spec 10
+    /// §Triple-quoted string literals). Only an unescaped `"""`
+    /// terminates.
+    fn scan_triple_string(&mut self, start: usize) -> Result<Token, LexError> {
+        self.pos += 3; // opening `"""`
+        let mut buf = String::new();
+        loop {
+            if self.pos >= self.src.len() {
+                return Err(LexError::new(
+                    LexErrorKind::UnterminatedTripleString,
+                    Span::new(start, self.src.len()),
+                ));
+            }
+            let c = self.src[self.pos];
+            // Closing `"""` — must not be escaped. The escape case
+            // takes `\\` → `\` and `\"` → `"` so a prefix of `\"`
+            // inside the body does not participate in the closer.
+            if c == b'"'
+                && self.src.get(self.pos + 1) == Some(&b'"')
+                && self.src.get(self.pos + 2) == Some(&b'"')
+            {
+                self.pos += 3;
+                return Ok(Token::new(TokenKind::Str(buf), Span::new(start, self.pos)));
+            }
+            match c {
+                b'\\' => {
+                    self.pos += 1;
+                    self.scan_escape(&mut buf)?;
+                }
+                b'\r' => {
+                    // Normalise CRLF to LF; a bare `\r` is an error
+                    // as in the rest of the source.
+                    if self.src.get(self.pos + 1) == Some(&b'\n') {
+                        buf.push('\n');
+                        self.pos += 2;
+                    } else {
+                        return Err(LexError::new(
+                            LexErrorKind::BareCarriageReturn,
+                            Span::new(self.pos, self.pos + 1),
+                        ));
+                    }
+                }
+                _ => {
+                    // Copy the whole UTF-8 code point verbatim.
+                    let n = utf8_len(c);
+                    let end = (self.pos + n).min(self.src.len());
+                    let slice = &self.src[self.pos..end];
                     let s = std::str::from_utf8(slice).expect("source is UTF-8");
                     buf.push_str(s);
                     self.pos = end;

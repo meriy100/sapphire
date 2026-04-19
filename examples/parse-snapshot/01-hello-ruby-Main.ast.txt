@@ -1,0 +1,417 @@
+Module {
+    header: Some(
+        ModuleHeader {
+            name: ModName {
+                segments: [
+                    "Main",
+                ],
+                span: Span {
+                    start: 7,
+                    end: 11,
+                },
+            },
+            exports: Some(
+                [
+                    Value {
+                        name: "main",
+                        operator: false,
+                        span: Span {
+                            start: 16,
+                            end: 20,
+                        },
+                    },
+                ],
+            ),
+            span: Span {
+                start: 0,
+                end: 81,
+            },
+        },
+    ),
+    imports: [],
+    decls: [
+        Signature {
+            name: "main",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: App {
+                    func: Con {
+                        module: None,
+                        name: "Ruby",
+                        span: Span {
+                            start: 84,
+                            end: 88,
+                        },
+                    },
+                    arg: Record {
+                        fields: [],
+                        span: Span {
+                            start: 89,
+                            end: 91,
+                        },
+                    },
+                    span: Span {
+                        start: 84,
+                        end: 91,
+                    },
+                },
+                span: Span {
+                    start: 84,
+                    end: 91,
+                },
+            },
+            span: Span {
+                start: 77,
+                end: 91,
+            },
+        },
+        Value(
+            ValueClause {
+                name: "main",
+                operator: false,
+                params: [],
+                body: Do {
+                    stmts: [
+                        Expr(
+                            App {
+                                func: Var {
+                                    module: None,
+                                    name: "greet",
+                                    span: Span {
+                                        start: 104,
+                                        end: 109,
+                                    },
+                                },
+                                arg: Lit(
+                                    Str(
+                                        "Sapphire",
+                                    ),
+                                    Span {
+                                        start: 110,
+                                        end: 120,
+                                    },
+                                ),
+                                span: Span {
+                                    start: 104,
+                                    end: 120,
+                                },
+                            },
+                        ),
+                        Expr(
+                            App {
+                                func: Var {
+                                    module: None,
+                                    name: "greet",
+                                    span: Span {
+                                        start: 123,
+                                        end: 128,
+                                    },
+                                },
+                                arg: Lit(
+                                    Str(
+                                        "world",
+                                    ),
+                                    Span {
+                                        start: 129,
+                                        end: 136,
+                                    },
+                                ),
+                                span: Span {
+                                    start: 123,
+                                    end: 136,
+                                },
+                            },
+                        ),
+                    ],
+                    span: Span {
+                        start: 99,
+                        end: 187,
+                    },
+                },
+                span: Span {
+                    start: 92,
+                    end: 187,
+                },
+            },
+        ),
+        Signature {
+            name: "greet",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 195,
+                            end: 201,
+                        },
+                    },
+                    result: App {
+                        func: Con {
+                            module: None,
+                            name: "Ruby",
+                            span: Span {
+                                start: 205,
+                                end: 209,
+                            },
+                        },
+                        arg: Record {
+                            fields: [],
+                            span: Span {
+                                start: 210,
+                                end: 212,
+                            },
+                        },
+                        span: Span {
+                            start: 205,
+                            end: 212,
+                        },
+                    },
+                    span: Span {
+                        start: 195,
+                        end: 212,
+                    },
+                },
+                span: Span {
+                    start: 195,
+                    end: 212,
+                },
+            },
+            span: Span {
+                start: 187,
+                end: 212,
+            },
+        },
+        Value(
+            ValueClause {
+                name: "greet",
+                operator: false,
+                params: [
+                    Var {
+                        name: "name",
+                        span: Span {
+                            start: 219,
+                            end: 223,
+                        },
+                    },
+                ],
+                body: App {
+                    func: Var {
+                        module: None,
+                        name: "rubyPuts",
+                        span: Span {
+                            start: 226,
+                            end: 234,
+                        },
+                    },
+                    arg: App {
+                        func: Var {
+                            module: None,
+                            name: "makeMessage",
+                            span: Span {
+                                start: 236,
+                                end: 247,
+                            },
+                        },
+                        arg: Var {
+                            module: None,
+                            name: "name",
+                            span: Span {
+                                start: 248,
+                                end: 252,
+                            },
+                        },
+                        span: Span {
+                            start: 236,
+                            end: 252,
+                        },
+                    },
+                    span: Span {
+                        start: 226,
+                        end: 252,
+                    },
+                },
+                span: Span {
+                    start: 213,
+                    end: 252,
+                },
+            },
+        ),
+        Signature {
+            name: "makeMessage",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 324,
+                            end: 330,
+                        },
+                    },
+                    result: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 334,
+                            end: 340,
+                        },
+                    },
+                    span: Span {
+                        start: 324,
+                        end: 340,
+                    },
+                },
+                span: Span {
+                    start: 324,
+                    end: 340,
+                },
+            },
+            span: Span {
+                start: 310,
+                end: 340,
+            },
+        },
+        Value(
+            ValueClause {
+                name: "makeMessage",
+                operator: false,
+                params: [
+                    Var {
+                        name: "name",
+                        span: Span {
+                            start: 353,
+                            end: 357,
+                        },
+                    },
+                ],
+                body: BinOp {
+                    op: "++",
+                    left: Lit(
+                        Str(
+                            "Hello, ",
+                        ),
+                        Span {
+                            start: 360,
+                            end: 369,
+                        },
+                    ),
+                    right: BinOp {
+                        op: "++",
+                        left: Var {
+                            module: None,
+                            name: "name",
+                            span: Span {
+                                start: 373,
+                                end: 377,
+                            },
+                        },
+                        right: Lit(
+                            Str(
+                                "!",
+                            ),
+                            Span {
+                                start: 381,
+                                end: 384,
+                            },
+                        ),
+                        span: Span {
+                            start: 373,
+                            end: 384,
+                        },
+                    },
+                    span: Span {
+                        start: 360,
+                        end: 384,
+                    },
+                },
+                span: Span {
+                    start: 341,
+                    end: 384,
+                },
+            },
+        ),
+        Signature {
+            name: "rubyPuts",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 451,
+                            end: 457,
+                        },
+                    },
+                    result: App {
+                        func: Con {
+                            module: None,
+                            name: "Ruby",
+                            span: Span {
+                                start: 461,
+                                end: 465,
+                            },
+                        },
+                        arg: Record {
+                            fields: [],
+                            span: Span {
+                                start: 466,
+                                end: 468,
+                            },
+                        },
+                        span: Span {
+                            start: 461,
+                            end: 468,
+                        },
+                    },
+                    span: Span {
+                        start: 451,
+                        end: 468,
+                    },
+                },
+                span: Span {
+                    start: 451,
+                    end: 468,
+                },
+            },
+            span: Span {
+                start: 440,
+                end: 468,
+            },
+        },
+        RubyEmbed(
+            RubyEmbedDecl {
+                name: "rubyPuts",
+                params: [
+                    Param {
+                        name: "s",
+                        span: Span {
+                            start: 478,
+                            end: 479,
+                        },
+                    },
+                ],
+                source: "\n  puts s\n",
+                span: Span {
+                    start: 469,
+                    end: 499,
+                },
+            },
+        ),
+    ],
+    span: Span {
+        start: 0,
+        end: 500,
+    },
+}

@@ -8,22 +8,7 @@
 
 use std::fmt;
 
-/// Byte-offset span into the source text.
-///
-/// Both `start` and `end` are inclusive–exclusive byte indices into
-/// the UTF-8 source buffer. `end >= start` always holds; an empty
-/// span (`start == end`) is used for synthetic tokens such as `Eof`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
-}
-
-impl Span {
-    pub const fn new(start: usize, end: usize) -> Self {
-        Self { start, end }
-    }
-}
+pub use sapphire_core::span::Span;
 
 /// A lexed token with its source-byte span.
 #[derive(Debug, Clone, PartialEq, Eq)]

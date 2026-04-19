@@ -41,6 +41,10 @@ pub enum LexErrorKind {
     /// A string literal was not closed by a matching `"` before
     /// end-of-input or end-of-line.
     UnterminatedString,
+    /// A triple-quoted string literal (`"""..."""`) was not closed
+    /// by a matching `"""` before end-of-input (spec 10
+    /// §Triple-quoted string literals).
+    UnterminatedTripleString,
     /// A physical newline appeared inside a single-line string
     /// literal. Multi-line strings are deferred.
     NewlineInString,
@@ -90,6 +94,9 @@ impl fmt::Display for LexErrorKind {
             }
             LexErrorKind::UnterminatedString => {
                 write!(f, "unterminated string literal")
+            }
+            LexErrorKind::UnterminatedTripleString => {
+                write!(f, "unterminated triple-quoted string literal")
             }
             LexErrorKind::NewlineInString => {
                 write!(f, "newline inside string literal")
