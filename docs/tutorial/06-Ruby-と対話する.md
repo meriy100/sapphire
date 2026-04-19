@@ -266,6 +266,12 @@ Ruby アプリ側から `Sapphire::Main.main` として呼ぶ使い方も想定
 して `Result MyError a` に載せる、というのが Sapphire の推奨
 スタイルです（文書 12 §Example 4）。
 
+以下のコード片は、本章での読みやすさを優先して **1 モジュール
+に畳んで** 示します。文書 12 の原版は `Http`（interop プリミ
+ティブ）と `Fetch`（ドメインロジック）の 2 モジュール構成で、
+同じ型と関数が `import Http (get, HttpError(..))` で受け渡さ
+れている点だけが違います。
+
 ```
 data HttpError
   = NetworkError String
@@ -283,8 +289,9 @@ get url := """
     if res.is_a?(Net::HTTPSuccess)
       { tag: :Ok, values: [res.body] }
     else
+      msg = res.message || "unknown"   # nil を境界に渡さないための保険
       { tag: :Err, values: [
-        { tag: :StatusError, values: [res.code.to_i, res.message] }
+        { tag: :StatusError, values: [res.code.to_i, msg] }
       ] }
     end
   rescue => e
