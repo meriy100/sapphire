@@ -14,7 +14,8 @@
 | `lexer-snapshot/` | I3 | runnable | `cargo run -p sapphire-compiler --example lex_dump -- examples/lexer-snapshot/hello.sp` |
 | `runtime-adt/` | R2+R3 | runnable | `ruby -I runtime/lib examples/runtime-adt/<script>.rb` |
 | `lsp-smoke/` | L1 | editor-side | VSCode で `examples/lsp-smoke/hello.sp` を開き `editors/vscode/` extension を F5 起動 |
-| `sources/` | spec 12 送り | parse 不可（現状） | コンパイラ完成後に `sapphire build / run` で動かす |
+| `sources/` | spec 12 送り | parse 可（AST 止まり） | `cargo run -p sapphire-compiler --example parse_dump -- examples/sources/<dir>/<file>.sp` |
+| `parse-snapshot/` | I4 | runnable | `cargo run -p sapphire-compiler --example parse_dump -- examples/sources/01-hello-ruby/Main.sp` ほか。期待出力は `parse-snapshot/*.ast.txt` |
 
 状態ラベル：
 

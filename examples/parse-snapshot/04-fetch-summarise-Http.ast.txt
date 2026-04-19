@@ -1,0 +1,215 @@
+Module {
+    header: Some(
+        ModuleHeader {
+            name: ModName {
+                segments: [
+                    "Http",
+                ],
+                span: Span {
+                    start: 7,
+                    end: 11,
+                },
+            },
+            exports: Some(
+                [
+                    Value {
+                        name: "get",
+                        operator: false,
+                        span: Span {
+                            start: 16,
+                            end: 19,
+                        },
+                    },
+                    TypeAll {
+                        name: "HttpError",
+                        span: Span {
+                            start: 21,
+                            end: 30,
+                        },
+                    },
+                ],
+            ),
+            span: Span {
+                start: 0,
+                end: 50,
+            },
+        },
+    ),
+    imports: [],
+    decls: [
+        Data(
+            DataDecl {
+                name: "HttpError",
+                type_params: [],
+                ctors: [
+                    DataCtor {
+                        name: "NetworkError",
+                        args: [
+                            Con {
+                                module: None,
+                                name: "String",
+                                span: Span {
+                                    start: 78,
+                                    end: 84,
+                                },
+                            },
+                        ],
+                        span: Span {
+                            start: 65,
+                            end: 84,
+                        },
+                    },
+                    DataCtor {
+                        name: "StatusError",
+                        args: [
+                            Con {
+                                module: None,
+                                name: "Int",
+                                span: Span {
+                                    start: 102,
+                                    end: 105,
+                                },
+                            },
+                            Con {
+                                module: None,
+                                name: "String",
+                                span: Span {
+                                    start: 106,
+                                    end: 112,
+                                },
+                            },
+                        ],
+                        span: Span {
+                            start: 89,
+                            end: 112,
+                        },
+                    },
+                    DataCtor {
+                        name: "DecodeError",
+                        args: [
+                            Con {
+                                module: None,
+                                name: "String",
+                                span: Span {
+                                    start: 130,
+                                    end: 136,
+                                },
+                            },
+                        ],
+                        span: Span {
+                            start: 117,
+                            end: 136,
+                        },
+                    },
+                ],
+                span: Span {
+                    start: 46,
+                    end: 136,
+                },
+            },
+        ),
+        Signature {
+            name: "get",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 218,
+                            end: 224,
+                        },
+                    },
+                    result: App {
+                        func: Con {
+                            module: None,
+                            name: "Ruby",
+                            span: Span {
+                                start: 228,
+                                end: 232,
+                            },
+                        },
+                        arg: App {
+                            func: App {
+                                func: Con {
+                                    module: None,
+                                    name: "Result",
+                                    span: Span {
+                                        start: 234,
+                                        end: 240,
+                                    },
+                                },
+                                arg: Con {
+                                    module: None,
+                                    name: "HttpError",
+                                    span: Span {
+                                        start: 241,
+                                        end: 250,
+                                    },
+                                },
+                                span: Span {
+                                    start: 234,
+                                    end: 250,
+                                },
+                            },
+                            arg: Con {
+                                module: None,
+                                name: "String",
+                                span: Span {
+                                    start: 251,
+                                    end: 257,
+                                },
+                            },
+                            span: Span {
+                                start: 234,
+                                end: 257,
+                            },
+                        },
+                        span: Span {
+                            start: 228,
+                            end: 257,
+                        },
+                    },
+                    span: Span {
+                        start: 218,
+                        end: 257,
+                    },
+                },
+                span: Span {
+                    start: 218,
+                    end: 257,
+                },
+            },
+            span: Span {
+                start: 212,
+                end: 257,
+            },
+        },
+        RubyEmbed(
+            RubyEmbedDecl {
+                name: "get",
+                params: [
+                    Param {
+                        name: "url",
+                        span: Span {
+                            start: 263,
+                            end: 266,
+                        },
+                    },
+                ],
+                source: "\n  require 'net/http'\n  require 'uri'\n\n  begin\n    uri = URI.parse(url)\n    res = Net::HTTP.get_response(uri)\n    if res.is_a?(Net::HTTPSuccess)\n      { tag: :Ok, values: [res.body] }\n    else\n      msg = res.message || \"unknown\"\n      { tag: :Err, values: [\n        { tag: :StatusError, values: [res.code.to_i, msg] }\n      ] }\n    end\n  rescue => e\n    { tag: :Err, values: [\n      { tag: :NetworkError, values: [e.message] }\n    ] }\n  end\n",
+                span: Span {
+                    start: 259,
+                    end: 718,
+                },
+            },
+        ),
+    ],
+    span: Span {
+        start: 0,
+        end: 719,
+    },
+}

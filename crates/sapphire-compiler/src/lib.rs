@@ -1,9 +1,22 @@
 //! The Sapphire compiler.
 //!
-//! This crate hosts the lexer and (in later milestones) the parser,
-//! name resolver, type checker, and code generator. The lexer is the
-//! first real module and lives under [`lexer`]; see
-//! `docs/spec/02-lexical-syntax.md` for the normative specification
-//! and `docs/impl/09-lexer.md` for the implementation rationale.
+//! This crate hosts the front-end pipeline of the Sapphire compiler.
+//! The modules are layered so that each stage consumes the previous
+//! stage's output:
+//!
+//! - [`lexer`] — byte-level tokenisation (spec 02).
+//!   `docs/impl/09-lexer.md` records the design rationale.
+//! - [`layout`] — off-side-rule resolution (Haskell-98-ish), turning
+//!   `Newline`/`Indent` markers into virtual `{`, `;`, `}` tokens.
+//!   Rationale in `docs/impl/13-parser.md` §Layout.
+//! - [`parser`] — hand-written recursive descent + Pratt operator
+//!   parsing, producing an AST from `sapphire_core::ast`.
+//!   Rationale in `docs/impl/13-parser.md`.
+//!
+//! The AST itself lives in [`sapphire_core::ast`] so that the LSP
+//! crate can share it with the compiler without depending on the
+//! compiler pipeline.
 
+pub mod layout;
 pub mod lexer;
+pub mod parser;

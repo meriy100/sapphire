@@ -1,0 +1,787 @@
+Module {
+    header: Some(
+        ModuleHeader {
+            name: ModName {
+                segments: [
+                    "Fetch",
+                ],
+                span: Span {
+                    start: 7,
+                    end: 12,
+                },
+            },
+            exports: Some(
+                [
+                    Value {
+                        name: "main",
+                        operator: false,
+                        span: Span {
+                            start: 17,
+                            end: 21,
+                        },
+                    },
+                ],
+            ),
+            span: Span {
+                start: 0,
+                end: 39,
+            },
+        },
+    ),
+    imports: [
+        ImportDecl {
+            name: ModName {
+                segments: [
+                    "Http",
+                ],
+                span: Span {
+                    start: 40,
+                    end: 44,
+                },
+            },
+            qualified: false,
+            alias: None,
+            items: Only(
+                [
+                    Value {
+                        name: "get",
+                        operator: false,
+                        span: Span {
+                            start: 46,
+                            end: 49,
+                        },
+                    },
+                    TypeAll {
+                        name: "HttpError",
+                        span: Span {
+                            start: 51,
+                            end: 60,
+                        },
+                    },
+                ],
+            ),
+            span: Span {
+                start: 33,
+                end: 67,
+            },
+        },
+    ],
+    decls: [
+        Signature {
+            name: "main",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: App {
+                    func: Con {
+                        module: None,
+                        name: "Ruby",
+                        span: Span {
+                            start: 74,
+                            end: 78,
+                        },
+                    },
+                    arg: Record {
+                        fields: [],
+                        span: Span {
+                            start: 79,
+                            end: 81,
+                        },
+                    },
+                    span: Span {
+                        start: 74,
+                        end: 81,
+                    },
+                },
+                span: Span {
+                    start: 74,
+                    end: 81,
+                },
+            },
+            span: Span {
+                start: 67,
+                end: 81,
+            },
+        },
+        Value(
+            ValueClause {
+                name: "main",
+                operator: false,
+                params: [],
+                body: Do {
+                    stmts: [
+                        Bind {
+                            pattern: Var {
+                                name: "res",
+                                span: Span {
+                                    start: 94,
+                                    end: 97,
+                                },
+                            },
+                            expr: App {
+                                func: Var {
+                                    module: None,
+                                    name: "get",
+                                    span: Span {
+                                        start: 101,
+                                        end: 104,
+                                    },
+                                },
+                                arg: Lit(
+                                    Str(
+                                        "https://example.com/",
+                                    ),
+                                    Span {
+                                        start: 105,
+                                        end: 127,
+                                    },
+                                ),
+                                span: Span {
+                                    start: 101,
+                                    end: 127,
+                                },
+                            },
+                            span: Span {
+                                start: 94,
+                                end: 127,
+                            },
+                        },
+                        Expr(
+                            Case {
+                                scrutinee: Var {
+                                    module: None,
+                                    name: "res",
+                                    span: Span {
+                                        start: 135,
+                                        end: 138,
+                                    },
+                                },
+                                arms: [
+                                    CaseArm {
+                                        pattern: Con {
+                                            module: None,
+                                            name: "Ok",
+                                            args: [
+                                                Var {
+                                                    name: "body",
+                                                    span: Span {
+                                                        start: 149,
+                                                        end: 153,
+                                                    },
+                                                },
+                                            ],
+                                            span: Span {
+                                                start: 146,
+                                                end: 153,
+                                            },
+                                        },
+                                        body: Do {
+                                            stmts: [
+                                                Bind {
+                                                    pattern: Var {
+                                                        name: "n",
+                                                        span: Span {
+                                                            start: 166,
+                                                            end: 167,
+                                                        },
+                                                    },
+                                                    expr: App {
+                                                        func: Var {
+                                                            module: None,
+                                                            name: "stringLength",
+                                                            span: Span {
+                                                                start: 171,
+                                                                end: 183,
+                                                            },
+                                                        },
+                                                        arg: Var {
+                                                            module: None,
+                                                            name: "body",
+                                                            span: Span {
+                                                                start: 184,
+                                                                end: 188,
+                                                            },
+                                                        },
+                                                        span: Span {
+                                                            start: 171,
+                                                            end: 188,
+                                                        },
+                                                    },
+                                                    span: Span {
+                                                        start: 166,
+                                                        end: 188,
+                                                    },
+                                                },
+                                                Expr(
+                                                    App {
+                                                        func: Var {
+                                                            module: None,
+                                                            name: "rubyPuts",
+                                                            span: Span {
+                                                                start: 195,
+                                                                end: 203,
+                                                            },
+                                                        },
+                                                        arg: BinOp {
+                                                            op: "++",
+                                                            left: Lit(
+                                                                Str(
+                                                                    "fetched ",
+                                                                ),
+                                                                Span {
+                                                                    start: 205,
+                                                                    end: 215,
+                                                                },
+                                                            ),
+                                                            right: BinOp {
+                                                                op: "++",
+                                                                left: App {
+                                                                    func: Var {
+                                                                        module: None,
+                                                                        name: "show",
+                                                                        span: Span {
+                                                                            start: 219,
+                                                                            end: 223,
+                                                                        },
+                                                                    },
+                                                                    arg: Var {
+                                                                        module: None,
+                                                                        name: "n",
+                                                                        span: Span {
+                                                                            start: 224,
+                                                                            end: 225,
+                                                                        },
+                                                                    },
+                                                                    span: Span {
+                                                                        start: 219,
+                                                                        end: 225,
+                                                                    },
+                                                                },
+                                                                right: Lit(
+                                                                    Str(
+                                                                        " bytes",
+                                                                    ),
+                                                                    Span {
+                                                                        start: 229,
+                                                                        end: 237,
+                                                                    },
+                                                                ),
+                                                                span: Span {
+                                                                    start: 219,
+                                                                    end: 237,
+                                                                },
+                                                            },
+                                                            span: Span {
+                                                                start: 205,
+                                                                end: 237,
+                                                            },
+                                                        },
+                                                        span: Span {
+                                                            start: 195,
+                                                            end: 237,
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                            span: Span {
+                                                start: 157,
+                                                end: 243,
+                                            },
+                                        },
+                                        span: Span {
+                                            start: 146,
+                                            end: 243,
+                                        },
+                                    },
+                                    CaseArm {
+                                        pattern: Con {
+                                            module: None,
+                                            name: "Err",
+                                            args: [
+                                                Var {
+                                                    name: "httpErr",
+                                                    span: Span {
+                                                        start: 247,
+                                                        end: 254,
+                                                    },
+                                                },
+                                            ],
+                                            span: Span {
+                                                start: 243,
+                                                end: 254,
+                                            },
+                                        },
+                                        body: App {
+                                            func: Var {
+                                                module: None,
+                                                name: "rubyPuts",
+                                                span: Span {
+                                                    start: 258,
+                                                    end: 266,
+                                                },
+                                            },
+                                            arg: App {
+                                                func: Var {
+                                                    module: None,
+                                                    name: "explain",
+                                                    span: Span {
+                                                        start: 268,
+                                                        end: 275,
+                                                    },
+                                                },
+                                                arg: Var {
+                                                    module: None,
+                                                    name: "httpErr",
+                                                    span: Span {
+                                                        start: 276,
+                                                        end: 283,
+                                                    },
+                                                },
+                                                span: Span {
+                                                    start: 268,
+                                                    end: 283,
+                                                },
+                                            },
+                                            span: Span {
+                                                start: 258,
+                                                end: 283,
+                                            },
+                                        },
+                                        span: Span {
+                                            start: 243,
+                                            end: 283,
+                                        },
+                                    },
+                                ],
+                                span: Span {
+                                    start: 130,
+                                    end: 286,
+                                },
+                            },
+                        ),
+                    ],
+                    span: Span {
+                        start: 89,
+                        end: 286,
+                    },
+                },
+                span: Span {
+                    start: 82,
+                    end: 286,
+                },
+            },
+        ),
+        Signature {
+            name: "explain",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "HttpError",
+                        span: Span {
+                            start: 296,
+                            end: 305,
+                        },
+                    },
+                    result: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 309,
+                            end: 315,
+                        },
+                    },
+                    span: Span {
+                        start: 296,
+                        end: 315,
+                    },
+                },
+                span: Span {
+                    start: 296,
+                    end: 315,
+                },
+            },
+            span: Span {
+                start: 286,
+                end: 315,
+            },
+        },
+        Value(
+            ValueClause {
+                name: "explain",
+                operator: false,
+                params: [
+                    Var {
+                        name: "err",
+                        span: Span {
+                            start: 324,
+                            end: 327,
+                        },
+                    },
+                ],
+                body: Case {
+                    scrutinee: Var {
+                        module: None,
+                        name: "err",
+                        span: Span {
+                            start: 335,
+                            end: 338,
+                        },
+                    },
+                    arms: [
+                        CaseArm {
+                            pattern: Con {
+                                module: None,
+                                name: "NetworkError",
+                                args: [
+                                    Var {
+                                        name: "m",
+                                        span: Span {
+                                            start: 357,
+                                            end: 358,
+                                        },
+                                    },
+                                ],
+                                span: Span {
+                                    start: 344,
+                                    end: 358,
+                                },
+                            },
+                            body: BinOp {
+                                op: "++",
+                                left: Lit(
+                                    Str(
+                                        "network error: ",
+                                    ),
+                                    Span {
+                                        start: 366,
+                                        end: 383,
+                                    },
+                                ),
+                                right: Var {
+                                    module: None,
+                                    name: "m",
+                                    span: Span {
+                                        start: 387,
+                                        end: 388,
+                                    },
+                                },
+                                span: Span {
+                                    start: 366,
+                                    end: 388,
+                                },
+                            },
+                            span: Span {
+                                start: 344,
+                                end: 388,
+                            },
+                        },
+                        CaseArm {
+                            pattern: Con {
+                                module: None,
+                                name: "StatusError",
+                                args: [
+                                    Var {
+                                        name: "c",
+                                        span: Span {
+                                            start: 404,
+                                            end: 405,
+                                        },
+                                    },
+                                    Var {
+                                        name: "msg",
+                                        span: Span {
+                                            start: 406,
+                                            end: 409,
+                                        },
+                                    },
+                                ],
+                                span: Span {
+                                    start: 391,
+                                    end: 409,
+                                },
+                            },
+                            body: BinOp {
+                                op: "++",
+                                left: Lit(
+                                    Str(
+                                        "HTTP ",
+                                    ),
+                                    Span {
+                                        start: 413,
+                                        end: 420,
+                                    },
+                                ),
+                                right: BinOp {
+                                    op: "++",
+                                    left: App {
+                                        func: Var {
+                                            module: None,
+                                            name: "show",
+                                            span: Span {
+                                                start: 424,
+                                                end: 428,
+                                            },
+                                        },
+                                        arg: Var {
+                                            module: None,
+                                            name: "c",
+                                            span: Span {
+                                                start: 429,
+                                                end: 430,
+                                            },
+                                        },
+                                        span: Span {
+                                            start: 424,
+                                            end: 430,
+                                        },
+                                    },
+                                    right: BinOp {
+                                        op: "++",
+                                        left: Lit(
+                                            Str(
+                                                ": ",
+                                            ),
+                                            Span {
+                                                start: 434,
+                                                end: 438,
+                                            },
+                                        ),
+                                        right: Var {
+                                            module: None,
+                                            name: "msg",
+                                            span: Span {
+                                                start: 442,
+                                                end: 445,
+                                            },
+                                        },
+                                        span: Span {
+                                            start: 434,
+                                            end: 445,
+                                        },
+                                    },
+                                    span: Span {
+                                        start: 424,
+                                        end: 445,
+                                    },
+                                },
+                                span: Span {
+                                    start: 413,
+                                    end: 445,
+                                },
+                            },
+                            span: Span {
+                                start: 391,
+                                end: 445,
+                            },
+                        },
+                        CaseArm {
+                            pattern: Con {
+                                module: None,
+                                name: "DecodeError",
+                                args: [
+                                    Var {
+                                        name: "m",
+                                        span: Span {
+                                            start: 461,
+                                            end: 462,
+                                        },
+                                    },
+                                ],
+                                span: Span {
+                                    start: 448,
+                                    end: 462,
+                                },
+                            },
+                            body: BinOp {
+                                op: "++",
+                                left: Lit(
+                                    Str(
+                                        "decode error: ",
+                                    ),
+                                    Span {
+                                        start: 470,
+                                        end: 486,
+                                    },
+                                ),
+                                right: Var {
+                                    module: None,
+                                    name: "m",
+                                    span: Span {
+                                        start: 490,
+                                        end: 491,
+                                    },
+                                },
+                                span: Span {
+                                    start: 470,
+                                    end: 491,
+                                },
+                            },
+                            span: Span {
+                                start: 448,
+                                end: 491,
+                            },
+                        },
+                    ],
+                    span: Span {
+                        start: 330,
+                        end: 633,
+                    },
+                },
+                span: Span {
+                    start: 316,
+                    end: 633,
+                },
+            },
+        ),
+        Signature {
+            name: "stringLength",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 648,
+                            end: 654,
+                        },
+                    },
+                    result: App {
+                        func: Con {
+                            module: None,
+                            name: "Ruby",
+                            span: Span {
+                                start: 658,
+                                end: 662,
+                            },
+                        },
+                        arg: Con {
+                            module: None,
+                            name: "Int",
+                            span: Span {
+                                start: 663,
+                                end: 666,
+                            },
+                        },
+                        span: Span {
+                            start: 658,
+                            end: 666,
+                        },
+                    },
+                    span: Span {
+                        start: 648,
+                        end: 666,
+                    },
+                },
+                span: Span {
+                    start: 648,
+                    end: 666,
+                },
+            },
+            span: Span {
+                start: 633,
+                end: 666,
+            },
+        },
+        RubyEmbed(
+            RubyEmbedDecl {
+                name: "stringLength",
+                params: [
+                    Param {
+                        name: "s",
+                        span: Span {
+                            start: 680,
+                            end: 681,
+                        },
+                    },
+                ],
+                source: "\n  s.bytesize\n",
+                span: Span {
+                    start: 667,
+                    end: 705,
+                },
+            },
+        ),
+        Signature {
+            name: "rubyPuts",
+            operator: false,
+            scheme: Scheme {
+                forall: [],
+                context: [],
+                body: Fun {
+                    param: Con {
+                        module: None,
+                        name: "String",
+                        span: Span {
+                            start: 718,
+                            end: 724,
+                        },
+                    },
+                    result: App {
+                        func: Con {
+                            module: None,
+                            name: "Ruby",
+                            span: Span {
+                                start: 728,
+                                end: 732,
+                            },
+                        },
+                        arg: Record {
+                            fields: [],
+                            span: Span {
+                                start: 733,
+                                end: 735,
+                            },
+                        },
+                        span: Span {
+                            start: 728,
+                            end: 735,
+                        },
+                    },
+                    span: Span {
+                        start: 718,
+                        end: 735,
+                    },
+                },
+                span: Span {
+                    start: 718,
+                    end: 735,
+                },
+            },
+            span: Span {
+                start: 707,
+                end: 735,
+            },
+        },
+        RubyEmbed(
+            RubyEmbedDecl {
+                name: "rubyPuts",
+                params: [
+                    Param {
+                        name: "s",
+                        span: Span {
+                            start: 745,
+                            end: 746,
+                        },
+                    },
+                ],
+                source: "\n  puts s\n",
+                span: Span {
+                    start: 736,
+                    end: 766,
+                },
+            },
+        ),
+    ],
+    span: Span {
+        start: 0,
+        end: 767,
+    },
+}
