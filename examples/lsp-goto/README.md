@@ -38,7 +38,7 @@ L1（scaffold）から L3（incremental sync）までの経路はそのまま使
 
 - **関数間参照**：`main` → `greet`, `greet` → `rubyPuts` /
   `makeMessage` の相互 goto。
-- **型名の goto**：`pickSig : T -> Int` の `T` → `data T`。
+- **型名の goto**：`pick : T -> Int` の `T` → `data T`。
 - **constructor の goto**：`pick` の case-arm `A` / `B` →
   `data T = A | B` の ctor 位置。
 - **let 束縛**：`makeMessage` 内の `let greeting = ...` の

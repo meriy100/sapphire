@@ -15,10 +15,10 @@
 --     - `main : Ruby {}` の `Ruby` → Prelude → goto なし
 --   * データ型と constructor
 --     - `pick` の case-arm `A` / `B` → `data T` の constructor 定義
---     - `pickSig : T -> ...` の `T` → `data T` の型名位置
+--     - `pick : T -> Int` の `T` → `data T` の型名位置
 --   * 同一関数内の局所束縛
 --     - `greet name = rubyPuts (makeMessage name)` の `name`
---     - let 束縛 `let local = ...` の `local` 参照
+--     - let 束縛 `let greeting = ...` の `greeting` 参照
 --
 -- L5 現状の制約：
 --
