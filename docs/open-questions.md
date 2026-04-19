@@ -222,6 +222,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ11 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
 | I-OQ12 | `sapphire-runtime` 側 Ruby formatter / linter 採否 | DEFERRED-IMPL | R1 では rubocop / standard-ruby を導入せず scaffold を最小化。`docs/impl/08-runtime-layout.md` §Rubocop / formatter。R2（ADT 実装）着地時に再評価。 |
 | I-OQ13 | `runtime/` を Cargo workspace の member にすべきか | DEFERRED-IMPL | 現状 Rust workspace 外。`runtime/` は独立 Ruby gem として閉じ、I2 の Cargo workspace には含めない。D1（配布設計）で再訪。 |
+| I-OQ29 | 単一 gem vs 複数 gem 構成 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §2。(A) 単一 `sapphire` + native gem、(B) メタ gem + `sapphire-compiler` + `sapphire-runtime`、(C) runtime gem のみ + CLI は別経路、の 3 案。draft は (A) を推奨、移行パスとして (C) を初回限定で採りうる。D2 の cross build 試行結果と user 判断で確定。 |
+| I-OQ30 | rb-sys 方式 vs 素の Rust binary 同梱方式 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3。Sapphire CLI は Ruby から FFI しない独立バイナリのため、Ruby ABI に縛られる `rb-sys` / native extension 方式（方式 Y）は合わない。素朴な `exe/sapphire` 同梱 platform gem（方式 X）を draft 採用。native extension が必要になる将来（LSP を Ruby プロセスに embed する設計変更が入った等）があれば再訪。 |
+| I-OQ31 | バイナリ署名 / SBOM の範囲 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §6。gem の `--sign`、OIDC trusted publishers、sigstore 署名、`cargo auditable`、`cargo sbom` のどこまでを v0 で含めるか。draft は `--sign` 採用せず、trusted publisher で push、SBOM は D2 で判断。D3 着地前に確定。 |
+| I-OQ32 | Windows の first-class / best-effort 線引き | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3 / §6。x86_64-pc-windows-msvc は first-class、aarch64 は best-effort を draft。CI matrix に Windows を加えるタイミング（Wave 2b vs 2c）も含めて D2 で確定。 |
+| I-OQ33 | CLI と runtime gem の version 一致ポリシー | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §5。draft は「major.minor 一致、patch はズレ可（`add_runtime_dependency "sapphire-runtime", "~> X.Y.0"`）」。起動時 version check の厳格さ（warning vs error）も合わせて D3 前に確定。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -342,5 +347,10 @@ OPEN として追加。user 判断待ち。
 済：**02-OQ4 / 02-OQ5 / 05-OQ6 / 08-OQ1 / 08-OQ2 / 08-OQ5 /
 10-OQ1 / 10-OQ3** は本文から OQ を削除し、該当節の規範的記述に
 畳み込んだ。Status は `DECIDED (要反映)` から `DECIDED` へ更新。
+
+2026-04-19（D1 タスク、`docs/impl/12-packaging.md`）で、配布設計
+由来の **I-OQ29〜I-OQ33** を §1.5 に追加。いずれも `DEFERRED-IMPL`
+で、D2（CI cross build）および D3（初回 release）の中で user 判断
+を仰ぐ位置付け。現時点では OPEN ではない。
 
 新しく OPEN が発生したらここで列挙する運用。
