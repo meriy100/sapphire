@@ -18,6 +18,13 @@
 //! `resolve` remain clean — which matches how VSCode feeds positions
 //! during live typing (the rest of the ident is already there to
 //! the right of the cursor).
+//!
+//! Fragility note: the needles below depend on the exact text of
+//! `examples/lsp-completion/hello.sp`. The example is expected to
+//! stay self-contained (no external imports beyond the implicit
+//! prelude, top-level names `greet` / `greeting` / `packHalf` /
+//! `Alpha` present). Rename any of those or add a collision and this
+//! test file needs updating alongside.
 
 use sapphire_compiler::analyze::analyze;
 use sapphire_compiler::resolver::resolve;

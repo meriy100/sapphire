@@ -155,6 +155,39 @@ L6 では **`.` だけ** を指定する。将来：
 - **I-OQ109** — Record field / module field 補完の trigger 拡張。
   `.` の曖昧性を整理したうえで record field access の推論側
   情報が取れた段階で開く。
+- **I-OQ110** — Operator シンボル候補の出し分け。prelude には
+  `+` / `++` / `>>=` / `::` などが value namespace で登録されて
+  いる。識別子カーソル位置ではそれらをそのまま挿入できないので、
+  現行 L6 は `is_identifier_label`（先頭文字が letter / `_`）で
+  フィルタして非表示にしている。カーソルが operator スロット
+  （空白直後の 2 項演算子位置）にあると判定できる段階で、
+  その条件に限って operator を再出現させるか検討。
+
+## 候補収集の契約
+
+- `find_completion_items(module, resolved, typed, source, offset)`
+  は **pure 関数**（I/O なし、乱数なし）。同じ引数に対して常に
+  同じ `Vec<CompletionItem>` を返す。具体的には、内部で触る
+  `env.unqualified` / `env.qualified_aliases` は `HashMap` で
+  iteration 順が不定なため、候補列挙時に key を sort して
+  安定化している。
+- `offset` は `source` の範囲外（末尾超え）でもよい。その場合は
+  末尾で切り詰めて扱う（例：ファイル末尾の改行直後、EOL の右端
+  など）。呼び出し側の line map は `offset > source.len()` を
+  渡しうるので、ヘルパ側で面倒を見る。
+- `offset` は **char boundary でなくてもよい**。multi-byte 文字の
+  途中に落ちた場合は左側の最近の境界にスナップする。
+- 結果の要素順は design note §候補源の優先順位 に従う。同じ
+  source 内での相対順は安定だが、client（VSCode 等）が最終的な
+  sort / ranking を行うため、server 側の順番は tie-breaker 程度
+  の意味しか持たない。
+- **Case arm の pattern binder は当該 arm の span 内にカーソルが
+  ある時にだけ可視**（reviewer must-fix, 2026-04-19）。sibling
+  arm の binder は互いに不可視で、`case t of P1 -> b1 ; P2 -> b2`
+  の b1 から P2 の binder、b2 から P1 の binder は見えない。
+- `unqualified` / `top_level` の列挙では、先頭が letter / `_`
+  でない **operator シンボル** をラベルから除外する（I-OQ110）。
+  prelude の `+` / `++` / `>>=` / `::` などがここで落ちる。
 
 ## 再レビュー時の観点
 
@@ -162,3 +195,6 @@ L6 では **`.` だけ** を指定する。将来：
 - `CompletionItem.label` と `insert_text` の分離は正しいか
   （operator 記号などで insert 不可能なものが混ざらないか）？
 - prefix 判定で `module.` 後の `.` を跨いだ scan をしていないか？
+- `case` / `lambda` / `let` / `do` の各 scope に対し、cursor が
+  その scope 内にある時だけ binder を候補化しているか（特に
+  `case` の arm 間で pattern binder が漏れないか）？

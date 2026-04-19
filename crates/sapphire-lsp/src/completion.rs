@@ -374,7 +374,24 @@ impl LocalCollector<'_> {
                 scrutinee, arms, ..
             } => {
                 self.visit_expr(scrutinee);
-                for CaseArm { pattern, body, .. } in arms {
+                for CaseArm {
+                    pattern,
+                    body,
+                    span: arm_span,
+                } in arms
+                {
+                    // `case t of P1 -> b1 ; P2 -> b2` binds each
+                    // arm's pattern only over its own body. The
+                    // `pattern_binds` cursor guard is based on
+                    // `body.span().end`, which would otherwise accept
+                    // a sibling arm's binders when the cursor sits
+                    // in an earlier arm's body (the sibling body ends
+                    // *after* the cursor). Restrict to the arm whose
+                    // span contains the cursor so siblings stay
+                    // invisible.
+                    if !span_contains_inclusive(*arm_span, self.cursor) {
+                        continue;
+                    }
                     self.pattern_binds(pattern, body.span().end);
                     self.visit_expr(body);
                 }
@@ -462,6 +479,9 @@ fn collect_top_level(
 ) {
     let mut seen: Vec<(String, Namespace)> = Vec::new();
     for def in &env.top_level {
+        if !is_identifier_label(&def.name) {
+            continue;
+        }
         if !matches_prefix(&def.name, prefix) {
             continue;
         }
@@ -502,13 +522,27 @@ fn collect_unqualified(
         .map(|d| (d.name.clone(), d.namespace))
         .collect();
 
-    for ((name, ns), refs) in &env.unqualified {
+    // `env.unqualified` is a HashMap, so its iteration order is
+    // effectively undefined and varies between runs. Sort the keys
+    // by `(name, namespace)` so completion output is stable and
+    // matches the "insertion order" contract of the design memo
+    // (`docs/impl/31-lsp-completion.md` §候補源の優先順位) — clients
+    // still re-sort by their own ranking, but deterministic server
+    // output keeps snapshot-style tests reproducible.
+    let mut keys: Vec<&(String, Namespace)> = env.unqualified.keys().collect();
+    keys.sort_by(|a, b| a.0.cmp(&b.0).then(namespace_cmp(a.1, b.1)));
+
+    for (name, ns) in keys {
+        if !is_identifier_label(name) {
+            continue;
+        }
         if !matches_prefix(name, prefix) {
             continue;
         }
         if shadowed.iter().any(|(n, s)| n == name && s == ns) {
             continue;
         }
+        let refs = &env.unqualified[&(name.clone(), *ns)];
         for r in refs {
             let key = (name.clone(), r.module.clone());
             if seen.iter().any(|k| k == &key) {
@@ -527,12 +561,31 @@ fn collect_unqualified(
     }
 }
 
+/// Total order over [`Namespace`]. `Value` first, then `Type`, so
+/// the stable-sort helper in [`collect_unqualified`] orders
+/// same-name collisions deterministically.
+fn namespace_cmp(a: Namespace, b: Namespace) -> std::cmp::Ordering {
+    fn key(ns: Namespace) -> u8 {
+        match ns {
+            Namespace::Value => 0,
+            Namespace::Type => 1,
+        }
+    }
+    key(a).cmp(&key(b))
+}
+
 fn collect_module_qualifiers(env: &ModuleEnv, prefix: &str, out: &mut Vec<CompletionItem>) {
     // The module itself is entered into `qualified_aliases` under its
     // own dotted name; we still surface it (so `Foo.|` after a self-
     // qualified reference works uniformly). Aliases added via
     // `import M as L` also appear.
-    for key in env.qualified_aliases.keys() {
+    //
+    // `qualified_aliases` is a HashMap: sort keys so the emitted
+    // order is stable across runs (see also the note on
+    // [`collect_unqualified`]).
+    let mut keys: Vec<&String> = env.qualified_aliases.keys().collect();
+    keys.sort();
+    for key in keys {
         if !matches_prefix(key, prefix) {
             continue;
         }
@@ -559,6 +612,9 @@ fn collect_qualified_names(
         // `compute_exports` elsewhere and does not shrink what the
         // author sees from inside the module).
         for def in &env.top_level {
+            if !is_identifier_label(&def.name) {
+                continue;
+            }
             if !matches_prefix(&def.name, prefix) {
                 continue;
             }
@@ -579,10 +635,17 @@ fn collect_qualified_names(
     // milestone (I-OQ108) pairs this with a workspace-wide module
     // export snapshot.
     let mut seen: Vec<(String, Namespace)> = Vec::new();
-    for ((name, ns), refs) in &env.unqualified {
+    // Stable iteration order — matches `collect_unqualified`.
+    let mut keys: Vec<&(String, Namespace)> = env.unqualified.keys().collect();
+    keys.sort_by(|a, b| a.0.cmp(&b.0).then(namespace_cmp(a.1, b.1)));
+    for (name, ns) in keys {
+        if !is_identifier_label(name) {
+            continue;
+        }
         if !matches_prefix(name, prefix) {
             continue;
         }
+        let refs = &env.unqualified[&(name.clone(), *ns)];
         for r in refs {
             if &r.module != target {
                 continue;
@@ -612,6 +675,22 @@ fn matches_prefix(name: &str, prefix: &str) -> bool {
         return true;
     }
     name.starts_with(prefix)
+}
+
+/// Return `true` when `name` can be used in identifier position
+/// without backtick / parenthesisation — i.e. it starts with a
+/// letter or `_`. Operator symbols from the prelude (`+`, `++`,
+/// `>>=`, `::`, `==`, …) live in the same value namespace as
+/// ordinary identifiers, so they otherwise leak into the empty-
+/// prefix candidate list. Completion clients usually cannot apply
+/// them verbatim at a cursor mid-identifier, so we drop them here.
+/// See I-OQ110: we may want to resurface them once the scan
+/// distinguishes operator position (e.g. cursor after a space on
+/// a binary-operator slot).
+fn is_identifier_label(name: &str) -> bool {
+    name.chars()
+        .next()
+        .is_some_and(|c| c == '_' || c.is_alphabetic())
 }
 
 fn kind_for_defkind(kind: &DefKind) -> CompletionItemKind {
@@ -1140,6 +1219,86 @@ f n = case n of
         let items = find_completion_items(&module, &resolved, &typed, src, cur);
         let lbls = labels(&items);
         assert!(lbls.contains(&"kappa".to_string()), "labels = {lbls:?}");
+    }
+
+    #[test]
+    fn completion_case_arm_binder_does_not_leak_into_earlier_arm() {
+        // Spec 06: each `case` arm binds its pattern only over its
+        // own body. From inside arm 1 (the `Just xxx ->` body), the
+        // binder `yyy` from arm 2 must NOT be visible. (The bug
+        // reviewer-I6 caught: the cursor check in `pattern_binds`
+        // only compared against each arm's `body.span().end`, so the
+        // later arm's body-end landed *past* the cursor and leaked
+        // its binders.)
+        let src = "\
+module M where
+
+f : Maybe Int -> Int
+f m = case m of
+  Just xxx -> xxx
+  Just yyy -> yyy
+";
+        // Cursor 2 chars into the RHS `xxx`, prefix `xx`. The second
+        // arm's `yyy` must not appear.
+        let cur = pos_inside(src, "-> xxx\n", "-> xx".len());
+        let (module, resolved, typed) = prepare(src);
+        let items = find_completion_items(&module, &resolved, &typed, src, cur);
+        let lbls = labels(&items);
+        assert!(lbls.contains(&"xxx".to_string()), "labels = {lbls:?}");
+        assert!(
+            !lbls.contains(&"yyy".to_string()),
+            "sibling arm binder leaked: labels = {lbls:?}",
+        );
+    }
+
+    #[test]
+    fn completion_case_arm_binder_does_not_leak_from_earlier_arm() {
+        // Symmetric to the above: from arm 2, arm 1's binder must
+        // not be visible either.
+        let src = "\
+module M where
+
+f : Maybe Int -> Int
+f m = case m of
+  Just xxx -> xxx
+  Just yyy -> yyy
+";
+        // Cursor 2 chars into the second arm's `yyy` RHS, prefix
+        // `yy`.
+        let cur = pos_inside(src, "-> yyy\n", "-> yy".len());
+        let (module, resolved, typed) = prepare(src);
+        let items = find_completion_items(&module, &resolved, &typed, src, cur);
+        let lbls = labels(&items);
+        assert!(lbls.contains(&"yyy".to_string()), "labels = {lbls:?}");
+        assert!(
+            !lbls.contains(&"xxx".to_string()),
+            "earlier arm binder leaked: labels = {lbls:?}",
+        );
+    }
+
+    #[test]
+    fn completion_no_operator_symbols_in_empty_prefix() {
+        // Operator-symbol imports (`+`, `++`, `>>=`, `::`, …) live
+        // in the same value namespace as ordinary identifiers but are
+        // not usable at an identifier cursor position. The empty-
+        // prefix completion must filter them out. See suggestion-
+        // reviewer (2026-04-19) and I-OQ110.
+        let src = "\
+module M where
+
+main : Int
+main = 0
+";
+        let cur = pos_inside(src, "main = 0", "main = ".len() - 1);
+        let (module, resolved, typed) = prepare(src);
+        let items = find_completion_items(&module, &resolved, &typed, src, cur);
+        let lbls = labels(&items);
+        for op in ["+", "-", "*", "++", ">>=", "::", "==", "<", ">"] {
+            assert!(
+                !lbls.iter().any(|l| l == op),
+                "operator label `{op}` leaked into completion: {lbls:?}",
+            );
+        }
     }
 
     #[test]
