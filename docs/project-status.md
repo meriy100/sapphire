@@ -7,15 +7,20 @@ why those rules are shaped the way they are.
 
 ## What Sapphire is
 
-Sapphire is a planned Elm-inspired functional language. Its compiler is
-intended to read `.sp` sources and emit a Ruby module that can be called
-from plain Ruby. A signature feature is a `RubyEval`-style monad that
+Sapphire is a planned Haskell-parity functional language (type classes
++ higher-kinded types). Its compiler reads `.sp` sources and emits Ruby
+modules that can be called from plain Ruby. A signature feature is an
+**effect monad** (type `Ruby a`, see `docs/spec/11-ruby-monad.md`) that
 runs embedded Ruby snippets on a separate thread and threads the result
 back into the pure pipeline.
 
-At the time this document was first written there was **no substantive
-source code in this repository**. That is still true as of the
-phase-transition day (2026-04-19); scaffolding begins next.
+As of 2026-04-19, Wave 1 of the implementation phase landed (Cargo
+workspace with three crates pinned to Rust 1.85.0, CI with Rust +
+Ruby jobs, `sapphire-runtime` gem scaffold, LSP stack selection,
+spec C-amendments). Wave 2 is in flight — lexer, runtime ADT helpers
+and boundary marshalling, LSP server scaffold + VSCode extension,
+tutorial ch5 rewrite, and distribution research. Progress is tracked
+in `docs/impl/06-implementation-roadmap.md`.
 
 ## Current phase: implementation (from 2026-04-19)
 
@@ -30,15 +35,22 @@ landing:
   will be written.
 
 The project is now in the **implementation phase**. In scope during
-this phase:
+this phase (tracks I / R / L / T / S / D, see
+`docs/impl/06-implementation-roadmap.md`):
 
-- Scaffolding the Rust compiler project (`Cargo.toml`, `src/`, CI).
+- Scaffolding the Rust compiler project (`Cargo.toml`, `src/`, CI) —
+  done (Wave 1, I2).
 - Implementing lexer, parser, AST, type checker, code generator in
   stages aligned with the spec documents.
 - Building `sapphire-runtime` — the Ruby-side support gem that
-  generated code depends on (per `docs/build/03-sapphire-runtime.md`).
+  generated code depends on (per `docs/build/03-sapphire-runtime.md`) —
+  scaffold done (Wave 1, R1).
+- Building a Language Server (VSCode-only for the first iteration,
+  track L) using `tower-lsp`.
 - Tutorial maintenance (T2 pedagogy revision track) alongside
   implementation feedback.
+- Distribution design (single `sapphire` gem vs split, platform
+  native gems, track D).
 - Closing open questions under `docs/open-questions.md` as
   implementation work reveals answers.
 
