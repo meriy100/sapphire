@@ -267,6 +267,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ77 | Language configuration の indentationRules 精度 | DEFERRED-IMPL | `docs/impl/23-vscode-extension-polish.md` §既知の近似。`language-configuration.json` の `indentationRules` は spec 02 §Layout を正規表現で近似するのみ。深い入れ子では破綻しうる。代替は LSP formatting provider / semantic indent hint（L7 以降）。 |
 | I-OQ78 | VSCode 拡張の marketplace 公開と publisher 名 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/23-vscode-extension-polish.md` §将来の拡張。`package.json` の `publisher: "meriy100"` は placeholder、`icon` も未設定。初回 release（D3）で user に最終確認。 |
 | I-OQ79 | 拡張の設定変更反映ポリシー | DEFERRED-IMPL | `docs/impl/23-vscode-extension-polish.md` §設定変更時の反映。現状は reload window 提案のみ。環境変数切り替えで頻繁に server バイナリを切り替える運用が主流になれば `client.restart()` ベースの動的化を検討。 |
+| I-OQ96 | Local binding 型の hover 表示 | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §Local binder の型表示を punt する。I6 は top-level scheme のみ back-annotate するので、L4 は当座 "名前 + `(local)` タグ + 『型情報未取得』注記" のみ返す。I-OQ57（typed AST の持ち方）で `HashMap<Span, Ty>` 側テーブルが整備された時点で L4 を拡張する。 |
+| I-OQ97 | Hover キャッシュ / incremental typecheck | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §Pipeline（L5 との共有）。現状は keystroke ごとに `check_module` を full re-run する。L3 の text sync incremental 化と同じ層で type info キャッシュが欲しい。I-OQ9 と L6 completion で再評価。 |
+| I-OQ98 | Prelude binding の docstring | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §今後の拡張。`install_prelude` は現状 scheme しか持たない。I-OQ44（Prelude の `.sp` 化）と合わせて doc comment を load し、hover Markdown の 2 段目に表示する。 |
+| I-OQ99 | Type-position hover の挙動 | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §新規 OQ。type variable（`a`, `b` …）や `forall` 量化子位置での hover が name-only になっている。L5 goto の I-OQ75 と paired。I6 が forall / 暗黙 quantifier の束縛位置を固めた段階で両方を拡張する。 |
+| I-OQ100 | `HoverTypes` の projection 戦略 | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §`HoverTypes` の shape。現状は `inferred` / `ctors` / `globals` を 3 projection clone する。I6 が新 side table を追加するたびに `HoverTypes` を広げる圧がかかる。projection を続けるか LSP セッション全体で `Arc<InferCtx>` 相当を抱える形に切り替えるかを、I-OQ57（typed AST の持ち方）着地時に決める。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -419,5 +424,20 @@ platform matrix の release-build ワークフロー整備に伴い
 `DECIDED` に更新した。gem の platform-native 配送は I-OQ29 /
 I-OQ30 / I-OQ31 と合わせて D3 で確定する。新規 OQ は発生せず
 （I-OQ101+ は予約のみ、未使用）。
+
+2026-04-19（L4 タスク、`docs/impl/28-lsp-hover.md`）で、
+LSP `textDocument/hover` 導入に伴い **I-OQ96〜I-OQ99** を §1.5 に
+追加。いずれも `DEFERRED-IMPL`。local binder の型表示（I-OQ96）は
+I-OQ57 連動で I6 が per-span `Ty` を露出したあと、hover キャッシュ
+（I-OQ97）は I-OQ9 連動、prelude docstring（I-OQ98）は I-OQ44 連動、
+type-position hover（I-OQ99）は L5 goto の I-OQ75 と paired で I6
+完了後に扱う。
+
+2026-04-19（L4 follow-up、`docs/impl/28-lsp-hover.md` reviewer
+must-fix 対応）で、`HoverTypes` に `globals: HashMap<GlobalId,
+Scheme>` projection を追加し prelude operator / user class method
+のスキーム表示を修復したのに伴い、**I-OQ100**（`HoverTypes` の
+projection 戦略）を §1.5 に追加。`DEFERRED-IMPL`、I-OQ57 着地時に
+projection 継続か `Arc<InferCtx>` 移行かを判断する。
 
 新しく OPEN が発生したらここで列挙する運用。
