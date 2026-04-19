@@ -1,86 +1,76 @@
 # 06. Ruby と対話する
 
-最終章。Sapphire の signature feature である **Ruby インタロップ**
-に踏み込む。前章で導入した `Monad` と `do` 記法の上で、Sapphire
-プログラムから Ruby のコードを呼び出し、結果を pure な Sapphire
-の世界に流し戻す方法を扱う。
+前章では `Monad` と `do` 記法で、`Maybe` / `Result` のような
+「失敗するかもしれない計算」を軽快に書く道具を手に入れました。
+本章では同じ `do` 記法の上で、Sapphire の signature feature で
+ある **Ruby インタロップ** に踏み込みます。主に文書 10（Ruby
+インタロップのデータモデル）、11（Ruby 評価モナド）、12（例題
+プログラム集）を背景にしています。
 
-主に文書 10（Ruby インタロップのデータモデル）、11（Ruby 評価
-モナド）、12（例題プログラム集）を背景にしている。
+## なぜ専用の型が要るのか
 
-## 大きな絵
+Sapphire では `puts` や HTTP リクエストのような **副作用** を、
+**型に必ず現れる** 形で扱います。普通の `String -> String` では
+なく `String -> Ruby String` と書けば、「呼ぶと Ruby を介して
+`String` を返す」ことがシグネチャから見て取れます。
 
-Sapphire のコードは最終的に Ruby モジュールを生成する
-（文書 10 §Generated Ruby module shape）。そして言語の中には、
-**書かれた Ruby コードの断片を、Ruby スレッド上で評価して結果を
-返す** 仕組みが備わっている。これが `Ruby` モナドである。
+この `Ruby` は、前章の `Maybe` や `Result e` と同じく **`Monad`
+のインスタンス**（文書 11 §Class instances）で、`do` / `<-` /
+`pure` がそっくり流用できます。違うのは **動機** で、`Maybe` /
+`Result` が「失敗の短絡」を担っていたのに対し、`Ruby` は
+「Ruby 側で副作用を起こしつつ結果を受け取る」を担います。
 
-ふたつの方向の境界を意識すると整理しやすい。
+こうして **同じ `Monad` のかたちを副作用の記述に使う** のが
+Sapphire の流儀で、文書 11 ではこの役割を **作用モナド**（英：
+*effect monad*）と呼びます。散文で「作用モナド」と書いていても、
+型位置では従来どおり `Ruby a` と書きます（文書 11 §Role term）。
+`Ruby` モジュールは `Prelude` と並んで **暗黙にインポート** される
+（文書 09 §The prelude as a module）ので、`import Ruby` は普通
+書きません。
 
-1. **Sapphire から Ruby を呼ぶ。** `:=` で Ruby コードを埋め
-   込み、`Ruby a` 型の値を作る。これを `do` で連鎖させ、最後に
-   `run` を呼ぶと Ruby スレッドが走り、結果が `Result RubyError a`
-   として戻ってくる。
-2. **Ruby から Sapphire を呼ぶ。** Sapphire モジュールは
-   `Sapphire::ModuleName` 形式の Ruby クラスにコンパイルされ、
-   公開されたトップレベル関数はクラスメソッドとして呼び出せる。
-   こちらは「Ruby アプリから Sapphire モジュールを require して
-   使う」という普段使いの形。
-
-このチュートリアルでは主に (1) の方向 — Sapphire 側から Ruby を
-呼ぶ — に集中する。
-
-## `Ruby a` 型
-
-`Ruby a` は「実行すると Ruby を介して `a` 型の値を返す **保留
-された計算**」である（文書 11 §Type signature）。
+## `Ruby a` の読み方
 
 | 型 | 意味 |
 |----|------|
-| `Ruby Int` | 実行すると Int を返す Ruby 計算 |
-| `Ruby String` | 実行すると String を返す Ruby 計算 |
-| `Ruby {}` | 実行すると「特に値を返さない」Ruby 計算（副作用専用） |
+| `Ruby Int` | 走らせると Ruby を介して `Int` を返す作用モナド |
+| `Ruby String` | 走らせると `String` を返す作用モナド |
+| `Ruby {}` | 値は持たず副作用だけを起こす作用モナド |
 
-`{}` は前章で出てきた **空レコード** の型で、値も `{}` の一つ
-だけ。Haskell の `()` (unit) に相当する位置づけ
-（文書 09 §Utility functions の余談）。
+`{}` は **空レコード**（文書 04）で、型も値も `{}` の一つきり。
+Haskell の `()` (unit) と同じ位置づけで、「副作用はあるが返す値
+はない」場面で使います。
 
-重要: `Ruby a` は **値を持っていない**。あくまで「実行すれば
-Ruby を介して `a` を取り出せる手順書」を持っているだけである。
-手順書を実際に走らせるのは `run` の仕事。
+重要な注意: `Ruby a` の値を手に入れても、**Ruby はまだ動いて
+いません**。これは「走らせれば `a` を取り出せる手順書」を持った
+値で、走らせるのは後述の `run` の仕事です。`Maybe a` が `Just x`
+か `Nothing` を「持っている値」だったのに対し、`Ruby a` は
+「実行したら値が出る予定の値」だ、と覚えておいてください。
 
-## 埋め込みの基本: `:=`
+## 最小の埋め込み: `:=`
+
+Ruby コードを 1 つの式として埋め込む、最小の形は次のとおりです
+（文書 10 §The embedding form）。
 
 ```
 rubyUpper : String -> Ruby String
 rubyUpper s := "s.upcase"
 ```
 
-これが Sapphire 文法上の **新しい束縛の形** で、`=` の代わりに
-`:=` を使い、右辺は Sapphire 式ではなく **Ruby ソースコードの
-文字列** を書く（文書 10 §The embedding form）。
+`=` の代わりに **`:=`** を使い、右辺は Sapphire 式ではなく
+**Ruby ソースコードの文字列** を書きます。ルール:
 
-ルール:
+- `:=` 束縛には型シグネチャが **必須**。
+- 結果型は `Ruby τ` の形でなければならない（最後が `Ruby τ` で
+  あれば途中に `->` が並んでもよい）。
+- 左辺に並べられるのは **単純な名前だけ**（分解パターン不可）。
+  引数は Ruby 側で **同じ名前のローカル変数** として見える。
 
-- `:=` を使う束縛には型シグネチャが **必須**。
-- 結果の型は `Ruby τ` の形でなければならない（途中に `->` が
-  挟まっていても最後が `Ruby τ` であればよい）。
-- 引数（ここでは `s`）は Ruby 側で **同じ名前のローカル変数**
-  として見える（文書 10 §The embedding form 末尾）。
+`rubyUpper "hello"` は `Ruby String` 型の値（まだ実行していない
+手順書）を返し、後で `run` したときに Ruby インタプリタが
+`s = "hello"` の状態で `s.upcase` を評価します。
 
-つまりこの `rubyUpper` は
-
-- Sapphire 側からは `rubyUpper "hello"` のように呼べる関数。
-- 呼ぶと `Ruby String` 型の値（保留された計算）が返る。
-- その計算を `run` すると、Ruby インタプリタが `s = "hello"` の
-  状態で `s.upcase` を評価する。成功すれば `Ok "HELLO"` が、Ruby
-  側で例外が飛んでいれば `Err e` が Sapphire 側に返る（詳しくは
-  下の「実行: `run`」節）。
-
-### 複数行の Ruby コード
-
-複数行を埋め込みたいときは三連引用符 `"""..."""` を使う
-（文書 10 §Triple-quoted string literals）。
+複数行を埋め込むときは三連引用符 `"""..."""` を使います（文書
+10 §Triple-quoted string literals）。
 
 ```
 rubyReadLines : String -> Ruby (List String)
@@ -89,13 +79,13 @@ rubyReadLines path := """
 """
 ```
 
-中身はそのまま Ruby として評価される。改行をそのまま含められる
-点だけが、ふつうの文字列リテラルとの違い。
+単一行の文字列リテラルには生の改行を書けない（文書 02）ので、
+複数行の Ruby スニペットは必ず三連引用符形になります。
 
-## データの行き来 (marshalling)
+## Ruby と Sapphire のあいだで値が移る
 
-Ruby 側と Sapphire 側を行き来する値は、文書 10 §Data model が
-定めるルールに従って **自動的に変換** される。
+Sapphire 側と Ruby 側を渡る値は、文書 10 §Data model のルールで
+**自動的に変換** されます。
 
 | Sapphire 型 | Ruby 表現 |
 |-------------|-----------|
@@ -111,108 +101,121 @@ Ruby 側と Sapphire 側を行き来する値は、文書 10 §Data model が
 | `LT` / `EQ` / `GT` | `:lt` / `:eq` / `:gt`（特例） |
 | 関数 | Ruby `Proc` (`Lambda`) |
 
-ADT が **タグ付きハッシュ** に変換される点が要所。Ruby 側で
-ADT に対応する値を作って返したいときは、この形のハッシュを
-組み立てればよい（文書 12 の例題 4 を参照）。
+要所は三つ:
 
-`Ordering` だけは特別扱いで、シンボル `:lt` `:eq` `:gt` に
-対応する。Ruby の `<=>` 慣用に合わせるためである。
+- **レコードは symbol キーの Hash**（文書 10 §Records）。
+- **ADT はタグ付きハッシュ**（文書 10 §ADTs）。`Just 1` が
+  `{ tag: :Just, values: [1] }` という envelope に統一されます。
+  Ruby 側で `Maybe a` や `Result e a` を作って返したいときも、
+  この形で組み立てればよい。
+- **`nil` は使わない**。「Ruby で `nil` を返したら `Nothing` に
+  なる」のような近道は **採りません**（文書 10 §ADTs の注記）。
+  `Just nil` と `Nothing` が区別できなくなるためで、`Maybe a` を
+  返す文脈でも必ずタグ付きハッシュを組み立てます。
 
-## まとめ役: `do` で連鎖する
+`Ordering` だけは特例で、`:lt` / `:eq` / `:gt` の 3 シンボルに
+直接対応します（Ruby の `<=>` 慣用に合わせるためで、他の ADT に
+波及するルールではありません）。
 
-Sapphire 側から `Ruby a` を組み立てるには、前章でやった `do`
-記法をそのまま使える。`Ruby` は `Monad` のインスタンス
-（文書 11 §Class instances）だからである。
+## `do` で Ruby アクションをつなぐ
 
-`Ruby` モジュールは `Prelude` と同じく **暗黙にインポートされる**
-（文書 09 §The prelude as a module、文書 11 §Interaction with
-earlier drafts）ので、明示的な `import Ruby` は普通は要らない。
+前章の `do` 記法がそのまま `Ruby a` にも使えます。Ruby スニペット
+を 1 つだけ包んだ小さな `Ruby a` を用意して、あとは `do` で連鎖
+するのが基本の形です。
 
 ```
-greetTwice : String -> Ruby {}
-greetTwice name = do
-  rubyPuts ("Hello, " ++ name)
-  rubyPuts ("Bye, "   ++ name)
-
 rubyPuts : String -> Ruby {}
 rubyPuts s := """
   puts s
 """
+
+greetTwice : String -> Ruby {}
+greetTwice name = do
+  rubyPuts ("Hello, " ++ name)
+  rubyPuts ("Bye, "   ++ name)
 ```
 
-`greetTwice "world"` は `Ruby {}` 型の値で、まだ何も実行されて
-いない。中身は
+`greetTwice "world"` は `Ruby {}` 型の値で、**まだ何も実行されて
+いません**。`do` ブロックは裏では
 
 ```
 rubyPuts "Hello, world" >>= \_ ->
   rubyPuts "Bye, world"
 ```
 
-と展開される（文書 07 §`do` notation の脱糖規則）。最初の
-`rubyPuts` の結果（`{}`）は使わないので `\_ ->` で受けている。
+と脱糖されます（文書 07 §`do` notation、前章 §`Monad` という抽象）。
+`rubyPuts` の結果 `{}` は使わないので、続けて書けば十分で、前章の
+「値を捨てる形」と同じです。値を受け取りたい行だけ `<-` を使い
+ます。
 
-## 実行: `run`
+```
+shout : String -> Ruby {}
+shout s = do
+  upper <- rubyUpper s
+  rubyPuts upper
+```
 
-`Ruby a` を実際に走らせるには `run` を呼ぶ
-（文書 11 §`run`）。
+`upper <- rubyUpper s` で `Ruby String` の中身を `upper : String`
+として取り出し、`rubyPuts upper` に渡しています。`Maybe` の `<-`
+が「`Nothing` なら短絡」だったのに対し、こちらの `<-` は
+「Ruby スレッドで前のステップを走らせて、結果を次に流す」に
+読み替わります。比喩は別物ですが、**式の形と脱糖規則は完全に
+同じ** です。`pure e` で純粋な値を `Ruby a` に持ち上げる点も
+前章と共通です。
+
+## 境界は `run`
+
+作った `Ruby a` を実際に走らせるのが `run`（文書 11 §`run`）です。
 
 ```
 run : Ruby a -> Result RubyError a
 ```
 
-- 例外が発生せずに終われば `Ok a`。
-- Ruby 側で例外が投げられれば `Err e`、`e` には `RubyError` が
-  入る。
+- 例外なく終われば `Ok a`。
+- Ruby 側で例外が上がったら `Err e`（`e : RubyError`）。
 
 `RubyError` は文書 10 §Exception model で次のように定義されて
-いる:
+います。
 
 ```
-data RubyError = RubyError
-  { class_name : String
-  , message    : String
-  , backtrace  : List String
-  }
+data RubyError = RubyError String String (List String)
+--                         class_name    message   backtrace
 ```
 
-つまり「例外クラスの名前、メッセージ、バックトレース」を持つ
-レコードである。Ruby の `rescue => e` で捕まえた `e` を、
-Sapphire 側の値として手元で扱える形に詰め直したもの。
+順に「例外クラス名、メッセージ、バックトレース」の 3 要素で、
+Ruby の `rescue => e` で捕まえた `e` を Sapphire 側に詰め直した
+もの、と考えるとよいでしょう。`rescue => e` と同じく **捕まえる
+のは `StandardError` 系のみ** で、`Interrupt` のようなシステム
+レベル例外は境界を素通りします。
 
-### 実行モデル
+`Ruby` から pure な Sapphire 側に値を出す経路は `run` **だけ**
+です（文書 11 §There is no `unsafeRun` / `runIO`）。`Ruby Int` から
+直接 `Int` は取れず、必ず `run` を通して `Result RubyError Int`
+で受け、`case` で分解します。この「出口が 1 つ」の設計が Sapphire
+のうたう **pure な世界と副作用の世界の明示的な境界** で、`run`
+までの `Ruby a` 値はすべて「作用の **記述**」であって「作用の
+**実行**」ではありません。
 
-文書 11 §Execution model が定めている要点だけ:
+### 実行モデルの要点
 
-1. `run` を呼ぶたびに **新しい Ruby スレッド** が立ち上がり、
-   そこですべての Ruby スニペットが順次評価される。
-2. `>>=` で連結された Ruby アクションは **逐次** 実行される。
-   並列はサポートされていない。
-3. 各 `:=` スニペットは **独立した Ruby ローカルスコープ** で
-   走る。前のスニペットで定義した Ruby のローカル変数は次の
-   スニペットからは見えない。状態を引き継ぎたいなら、その値を
-   Sapphire 側に戻して `do` の `<-` で受け、次の Ruby スニペット
-   に **引数として渡す**。
-4. 例外が出たら、以降のステップは飛ばされて `run` が `Err` を
-   返す。
+文書 11 §Execution model のうち、入門で意識するとよいのは次の
+4 点です。
 
-> Ruby の `Thread.new { ... }` を毎回作るような重さに見えるが、
-> これは「pure な Sapphire 世界と Ruby の VM 状態を切り離す」
-> ための意図的な設計（文書 11 §Design notes）。
+1. `run` を呼ぶたびに **新しい Ruby 評価スレッド** が立ち上がり、
+   そこで手順書のサブステップが順に走る。呼び出し元は完了を待つ。
+2. `>>=` で直列化されたステップは **逐次** に走る。
+3. 各 `:=` スニペットは **新鮮な Ruby ローカルスコープ** で走る。
+   前のスニペットで作った Ruby 側の局所変数は次からは **見えない**。
+   状態を引き継ぎたければ Sapphire 側に返して `<-` で受け、次の
+   スニペットに **引数として渡す**。
+4. どこかで例外が出たら以降はスキップされ `run` が `Err` を返す。
 
-### 「`Ruby` から逃げる方法は `run` だけ」
+3 が Ruby の感覚と食い違いやすい点です。「スニペット間で Ruby の
+状態を共有しない」方が Sapphire 側の推論と噛み合います。
 
-Sapphire には `unsafeRun` のような抜け道がない（文書 11
-§There is no `unsafeRun` / `runIO`）。`Ruby Int` 型の値から
-直接 `Int` を取り出すことはできず、必ず `run` を経由して
-`Result RubyError Int` という形にしてから case 分岐で取り出す。
+## 小さな一本: hello, Ruby
 
-これが Sapphire のうたう「pure な世界と effectful な世界の
-明示的な境界」である。Ruby の世界で何が起きても `Result` で
-くるんで返ってくる、という保証になる。
-
-## 一通り組んでみる
-
-文書 12 §Example 1 をベースにした最小プログラム。
+文書 12 §Example 1 をそのまま引くと、最小の通しは次の形です。
 
 ```
 module Main
@@ -236,62 +239,38 @@ rubyPuts s := """
 """
 ```
 
-読み方:
+読みどころ:
 
-- `main : Ruby {}` がエントリポイント。実体は二回 `greet` を
-  呼ぶだけの `Ruby` アクション。
-- `greet` は **pure な Sapphire 関数** だが、結果が
-  `Ruby {}` 型なので副作用を持つ計算を組み立てている。
-- `makeMessage` は完全に純粋。Ruby は一切絡まない。
-- `rubyPuts` だけが `:=` の Ruby スニペット。
+- `main : Ruby {}` がエントリポイント。`do` で `greet` を 2 回
+  呼ぶ手順書を組み立てているだけで、まだ何も実行していません。
+- `greet` は **pure な Sapphire 関数** だが、結果が `Ruby {}` な
+  ので「副作用を起こす手順書を作って返す関数」。Sapphire では
+  「副作用を起こす関数」と「手順書を作る純粋関数」の区別がなく、
+  すべて後者です。
+- `makeMessage` は Ruby に触れない完全に純粋な部分。**できる限り
+  pure 側を厚く** するのが Sapphire の書き方。
+- `rubyPuts` が唯一の `:=` 束縛。
 
-実行されるとき (`run main`) は:
+`run main` を呼ぶと Ruby スレッドで `puts "Hello, Sapphire!"` と
+`puts "Hello, world!"` が順に走り、例外が出なければ `Ok {}` が
+返ります。コンパイラは本モジュールを `Sapphire::Main` という
+Ruby クラスに落とす（文書 10 §Generated Ruby module shape）ので、
+Ruby アプリ側から `Sapphire::Main.main` として呼ぶ使い方も想定
+されていますが、本章では扱いません。
 
-1. Ruby スレッド起動。
-2. `puts "Hello, Sapphire!"` を実行（`rubyPuts` の 1 回目の
-   呼び出し）。
-3. `puts "Hello, world!"` を実行（`rubyPuts` の 2 回目の
-   呼び出し。同じ `:=` 束縛を別の引数で再利用している）。
-4. 例外なく終わったので `Ok {}` を返す。
+## エラーを二層に分ける
 
-文書 10 §Generated Ruby module shape のルールに従い、Sapphire
-コンパイラは概ね次のような Ruby コードを吐く（簡略化）:
+`run` が返す `Result RubyError a` は **想定外の Ruby 例外** を
+拾うチャネルです。いっぽう HTTP の 4xx や入力パースの失敗のような
+**想定内の失敗** は、Ruby の例外に任せずドメインの型として定義
+して `Result MyError a` に載せる、というのが Sapphire の推奨
+スタイルです（文書 12 §Example 4）。
 
-```ruby
-module Sapphire
-  class Main
-    def self.main
-      # do 記法を脱糖した連鎖を、Ruby 側のスレッドに乗せて実行
-      # 内部実装は省略
-    end
-  end
-end
-```
-
-Ruby アプリケーション側からは
-
-```ruby
-require 'sapphire/main'
-Sapphire::Main.main
-```
-
-として呼べる、という想定。
-
-## エラーチャネルを上手に使う
-
-ふたつの「エラー」を区別する設計が、Sapphire の Ruby
-インタロップでは推奨されている（文書 12 §Example 4 の読解
-ガイド）:
-
-- **本当の例外**: ネットワーク切れ、ファイル不在、Ruby ライブ
-  ラリの内部例外など、想定外の事態。これらは Ruby の `raise`
-  経由で発生し、`run` 時に `Err RubyError` として表面化する。
-- **想定内の失敗**: HTTP 4xx ステータス、入力のパースエラーなど、
-  「失敗パターンとして設計に組み込みたい」もの。これらは
-  ドメイン側で `Result MyError String` のような型を定義して
-  Ruby スニペットの戻り値に乗せる。
-
-例 (文書 12 §Example 4 から引用整形):
+以下のコード片は、本章での読みやすさを優先して **1 モジュール
+に畳んで** 示します。文書 12 の原版は `Http`（interop プリミ
+ティブ）と `Fetch`（ドメインロジック）の 2 モジュール構成で、
+同じ型と関数が `import Http (get, HttpError(..))` で受け渡さ
+れている点だけが違います。
 
 ```
 data HttpError
@@ -310,8 +289,9 @@ get url := """
     if res.is_a?(Net::HTTPSuccess)
       { tag: :Ok, values: [res.body] }
     else
+      msg = res.message || "unknown"   # nil を境界に渡さないための保険
       { tag: :Err, values: [
-        { tag: :StatusError, values: [res.code.to_i, res.message] }
+        { tag: :StatusError, values: [res.code.to_i, msg] }
       ] }
     end
   rescue => e
@@ -322,17 +302,16 @@ get url := """
 """
 ```
 
-`get` の型は `Ruby (Result HttpError String)`。
+`get` の型は `Ruby (Result HttpError String)` — 二重に包まれて
+いるのがミソ。**外側の `Ruby`** が「Ruby を呼びに行く」作用
+（`run` で剥がれると `Result RubyError _` になる）、**内側の
+`Result HttpError`** が「想定内の失敗を分類する」ドメイン側の型
+です。Ruby 側で `rescue` を書いて、想定内の失敗に分類し直して
+います。Ruby の返り値が `{ tag: :Ok, values: [...] }` 等の形で、
+タグ付きハッシュ規則どおり envelope を手で書いている点も確認
+しておいてください。
 
-- 二重に包まれているのがミソで、外側の `Ruby` が「Ruby を呼び
-  に行く」、内側の `Result HttpError` が「想定内の失敗を
-  分類する」。
-- Ruby 側で `rescue` を書いているが、これは想定内の
-  `NetworkError` に丸めるためのもの。これを書かなければ、
-  ネットワーク例外はそのまま `run` 経由で `Err RubyError` と
-  して上に届く。
-
-呼ぶ側は二段で受ける:
+呼ぶ側では `<-` と `case` を二段で組み合わせます。
 
 ```
 main : Ruby {}
@@ -346,86 +325,64 @@ main = do
       rubyPuts (explain httpErr)
 
 explain : HttpError -> String
-explain (NetworkError m)    = "network error: " ++ m
-explain (StatusError c msg) = "HTTP " ++ show c ++ ": " ++ msg
-explain (DecodeError m)     = "decode error: " ++ m
+explain err = case err of
+  NetworkError m     -> "network error: " ++ m
+  StatusError  c msg -> "HTTP " ++ show c ++ ": " ++ msg
+  DecodeError  m     -> "decode error: " ++ m
 
--- String の長さは Ruby 側に聞く（09 の prelude には文字列長が
--- 入っていないので、Ruby スニペットで `bytesize` を呼ぶ）
+-- 09 prelude に String の長さは入っていないので、ここだけ Ruby に聞く。
 stringLength : String -> Ruby Int
 stringLength s := """
   s.bytesize
 """
 ```
 
-`do` の中で `<-` で `Result HttpError String` を受け、`case` で
-内側を分解する。`Ok` アームが更に `do` を開いているのは、
-`stringLength body` が **`Ruby Int` であって `Int` ではない** から
-（`String -> Ruby Int`）。`<-` で剥がして `Int` の `n` を得てから
-`show n` に渡す。`Ruby a` から `a` に降りる唯一の経路は `<-` か
-`run` の二択 — この章の冒頭からの原則である。`Ruby` の例外は更に
-もう一段外側で `run` が受け止めるので、ここでは見えない。
+読み方:
 
-## まとめ
+- `res <- get "..."` で `Ruby (Result HttpError String)` から
+  `Result HttpError String` を取り出す。この `<-` は作用モナドの
+  `<-` で、「Ruby スレッドで `get` を走らせてから続きへ」と読む。
+- 取り出した `res` を **pure な `case` で** 分解。ここから先は
+  `Result` の話で Ruby は絡みません。
+- `Ok body` の枝が更に `do` を開いているのは、`stringLength body`
+  が `Ruby Int` で `Int` ではないため。もう一度 `<-` で剥がして
+  から `show n` に渡します。
+- `Err httpErr` の枝は `explain` で `String` に直してから
+  `rubyPuts`。純粋な分類は pure 関数に閉じ込める。
 
-Sapphire を Ruby と組み合わせて使うときの原則を改めて並べると:
+この「Ruby で外と会話 → Sapphire に戻って型で分類」の往復が、
+Sapphire Ruby インタロップの基本リズムです。
 
-- **Pure な部分はとことん pure**。`Ruby` 型を持たない関数は、
-  どんなに呼んでも副作用を起こせない。これが推論や reasoning の
-  土台になる。
-- **副作用は `Ruby` の中に押し込む**。`Ruby a` は単なる値で
-  あって、`>>=` / `do` で組み立てられる。
-- **境界は `run` 一箇所**。`Ruby` から外に出るには必ず `run` を
-  通り、結果は `Result RubyError a` という分類された形で受ける。
-- **データの marshalling は自動**。型に書いた通りに Ruby と
-  Sapphire の値を相互変換してくれる。ADT はタグ付きハッシュ。
+## まとめと次へ
 
-これだけ覚えれば、文書 12 にある例題は素直に読める。
+作用モナドの周辺で覚えておきたい原則を並べると:
+
+- **Pure な部分はとことん pure**。`Ruby` が付かない型はどんなに
+  呼んでも副作用を起こしません。
+- **副作用は `Ruby a` に押し込む**。`do` / `<-` / `pure` で自由に
+  組み立てられる。
+- **境界は `run` 一箇所**。Ruby 側の例外は `Result RubyError a`
+  にまとまって上がってきます。
+- **想定内の失敗はドメインの型で**。本物の例外は `Err RubyError`、
+  想定内の分類は `Ruby (Result MyError _)` と二層に分ける。
+- **marshalling は自動**。レコードは symbol キーの Hash、ADT は
+  タグ付きハッシュ、`nil` は使わない — の 3 点だけ押さえる。
+
+次に進むなら文書 12 §Example 4 の全文を通しで読んでみるのが
+おすすめです。本章で扱った道具はひととおり揃っているので、
+`Http` モジュールと `Fetch` モジュールに分かれた二モジュール版
+として、同じ形のコードがもう一段大きいスケールで書かれています。
 
 ## 仕様への気付き
 
-- 文書 11（Ruby モナド）は仕様としては比較的素直だが、これを
-  入門者に説明するためには、前章でやった `Monad` の理解が
-  かなり要る。チュートリアルとしては
-  「Maybe Monad で `do` の感覚をつかむ → Result Monad で同じ
-   形が再利用できる → Ruby Monad はそれの effect 版」
-  という三段ロケットでようやく飲み込めるという感触で、
-  正直なところ章一つ分の重さが集中している。
-- ただ、Ruby 利用者にとっては **`>>=` の翻訳に「早期リターンの
-  連鎖」を当てる** のが思いのほか効くため、Maybe / Result までは
-  比較的軽快に進める。最後の `Ruby` モナドのところは、`>>=` を
-  「Ruby スレッドの上で逐次実行する手順書を組み立てる演算子」と
-  説明し直す必要がある。比喩を取り替える接ぎ目があり、ここは
-  チュートリアルの摩擦点である。
-- 文書 10 のデータモデルは、Ruby 利用者には親しみやすい部類で、
-  説明の苦労は少ない。タグ付きハッシュの形が一目で意図と
-  繋がるので、ここはむしろ Sapphire の「分かりやすい」側。
-- 仕様簡素化の候補としては、Elm-Haskell 中間に倒すなら
-  `Functor` / `Applicative` を仕様の表面から薄くして、
-  `Monad` 単独で `do` を支える設計にするのが入門コストを
-  もっとも下げる。`Ruby` モナドだけが要るなら、汎用 `Monad`
-  すら導入せず「Ruby 専用 do 記法」にする選択もあるが、これは
-  2026-04-18 の方針転換（汎用 monad を入れる）と逆行するので、
-  仕様の方向性自体の判断が要る。
-- 全体として、05 章と 06 章は連続して読むことを前提に書いて
-  おり、05 章で `Monad` が腑に落ちさえすれば、06 章は素直に
-  着地できる。逆に言えば 05 章の出来が全体の重量を決めて
-  しまっており、ここを「型クラスを表に出さずに `Ruby` モナド
-  だけ説明する」軽量版に作り直すこともできる。判断は仕様の
-  目標水準しだい。
-
-## おわりに
-
-ここまでで、Sapphire の draft 仕様を一通り「動かしてみる気分」で
-眺めた。Sapphire という言語を一言で表すなら、
-
-> **「Elm の読みやすい関数型コアの上に、Haskell 級の抽象化機構と、
-> Ruby を effect として正面から扱う Monad を載せた言語」**
-
-である。仕様策定はこの draft をもって一区切りで、今後は実装言語の
-選定 / プロトタイプ作成のフェーズへと進んでいく
-（`docs/project-status.md`、`docs/roadmap.md`）。
-
-実例と詳細は文書 12 の四つの例題を眺めるのが手早い。気になった
-論点があれば、各仕様書末の Open questions 節に大体まとめて
-あるので、そこから議論に持ち込める。
+- 前章の `<-` を「失敗の短絡」と読むモデルから、「Ruby スレッド
+  上での逐次」に読み替える橋渡しが本章で一度だけ行なわれます。
+  式の形と脱糖規則が不変な点は強調しましたが、比喩がここで切り
+  替わる摩擦そのものは残るため、Example 4 の読解時に同じ点を
+  もう一度強化する必要があるかもしれません（T-06-1 として既存
+  登録済）。
+- データモデル側はタグ付きハッシュの形が素直で Ruby 利用者には
+  親しみやすい一方、`Just nil` と `Nothing` を区別するために
+  `nil` を使わない規約は Ruby 側の慣用と逆行しうるので、Ruby
+  スニペットを書くときに間違えやすいと思われます。規範は 10
+  §ADTs のまま（T-06-2）。
