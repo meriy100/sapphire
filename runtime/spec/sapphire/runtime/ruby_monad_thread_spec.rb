@@ -155,6 +155,26 @@ RSpec.describe Sapphire::Runtime::Ruby, "R5 thread isolation" do
 
       expect(rb.run(outer)).to eq([:ok, "outer"])
     end
+
+    it "propagates Interrupt across nested runs (two-level Thread#value re-raise)" do
+      # B-03-OQ5 DECIDED + I-OQ47 DECIDED: a signal raised inside
+      # the inner evaluator Thread must re-raise on the inner
+      # `run`'s caller (the outer evaluator Thread), which in turn
+      # lets it escape the outer action back to `Thread#value`'s
+      # re-raise on the original caller. The two-level Thread#value
+      # chain is what keeps propagation intact.
+      #
+      # SystemExit is covered by the top-level "does not rescue
+      # SystemExit" test but deliberately not re-tested here: a
+      # SystemExit propagating through the rspec runner perturbs
+      # its subsequent output buffer under random ordering (rspec
+      # catches it but `at_exit` finalisation interleaves with the
+      # reporter). Interrupt suffices to pin the two-level
+      # Thread#value chain for the nested-run case.
+      inner = rb.prim_embed { raise Interrupt }
+      outer = rb.prim_embed { rb.run(inner) }
+      expect { rb.run(outer) }.to raise_error(Interrupt)
+    end
   end
 
   describe "StandardError propagation via Thread#value" do

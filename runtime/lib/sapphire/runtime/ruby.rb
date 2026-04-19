@@ -137,7 +137,19 @@ module Sapphire
         # `run`.
         KINDS = %i[pure embed bind].freeze
 
+        # `kind` / `payload` are the internal discriminator and its
+        # associated closure / value. They are **private** and
+        # exposed to the evaluator (`Sapphire::Runtime::Ruby.run` /
+        # `.evaluate`) inside this same module only. External Ruby
+        # code, including user code and generated code, must treat
+        # `Action` as opaque per spec 11 §Type signature, i.e.
+        # interact exclusively via `prim_return` / `prim_embed` /
+        # `prim_bind` / `run`. The readers are declared here purely
+        # for debugging / introspection helpers within the runtime
+        # itself (and for `inspect` below); they are not a public
+        # surface.
         attr_reader :kind, :payload
+        private :kind, :payload
 
         def initialize(kind, payload)
           unless KINDS.include?(kind)
@@ -151,6 +163,11 @@ module Sapphire
 
         # A terser `inspect` than the default; keeps sensitive
         # closure internals out of logs.
+        #
+        # The `kind=` hint it emits is debug-only. Code must not
+        # parse it to branch behaviour — treat `Action` as opaque
+        # (spec 11 §Type signature) and go through the `prim_*`
+        # primitives + `run` instead.
         def inspect
           "#<Sapphire::Runtime::Ruby::Action kind=#{@kind}>"
         end
@@ -244,18 +261,23 @@ module Sapphire
         # how `Interrupt` / `SystemExit` / other non-StandardError
         # signals cross the boundary unaltered (B-03-OQ5 DECIDED).
         #
-        # `Thread#report_on_exception = false` suppresses Ruby's
-        # default "thread terminated with exception" warning on
-        # stderr; the exception is still captured by `value`. The
-        # R4-style `[:ok, _]` / `[:err, _]` conversion happens
-        # inside the thread body so the tuple itself is the
-        # thread's return value in the success / StandardError
-        # cases.
+        # The thread body disables Ruby's default "thread
+        # terminated with exception" stderr trail (`Thread.current
+        # .report_on_exception = false`, in-body so it applies
+        # before any work runs in the new thread). The exception is
+        # still captured by `Thread#value` and re-raised on the
+        # caller thread, which is the correct place to attribute
+        # the trail if the caller does not rescue it. The R4-style
+        # `[:ok, _]` / `[:err, _]` conversion also happens inside
+        # the thread body, so the tuple itself is the thread's
+        # return value in the success / StandardError cases.
         thread = Thread.new do
-          # Suppress MRI's default "thread terminated with
-          # exception" stderr trail when a non-StandardError (e.g.
-          # Interrupt) is raised inside the evaluator — the signal
-          # is captured by Thread#value below and re-raised on the
+          # Set inside the new thread (rather than on the returned
+          # Thread object from the caller side) so the flag is
+          # already in place when the body begins executing —
+          # there is no window in which an early raise could trip
+          # MRI's default stderr trail. The exception is still
+          # captured by Thread#value below and re-raised on the
           # caller thread, which is where the trail should be
           # attributed if the caller does not rescue it.
           Thread.current.report_on_exception = false
@@ -273,23 +295,41 @@ module Sapphire
       # final value. Exceptions propagate; `run` is the single
       # catch point.
       #
-      # The evaluator is iterative on the `:bind` spine so that
-      # deeply chained `prim_bind` does not exhaust Ruby's call
-      # stack. `:pure` and `:embed` leaves are evaluated inline;
-      # the continuation's result, which must itself be an
-      # `Action`, replaces the current action so the next step
-      # runs on the same loop.
+      # ## Bind-spine iterativity (design note)
+      #
+      # The evaluator is iterative on the **right spine** of
+      # `:bind`: once an upstream action evaluates to a value, the
+      # continuation's resulting `Action` replaces `current` and
+      # the `loop` consumes it without growing the Ruby call stack.
+      # Sapphire's do-notation desugar emits **right-associated**
+      # bind chains (`m >>= \x -> (k1 x >>= \y -> k2 y >>= ...)`),
+      # so every chain that arrives from Sapphire source is safely
+      # handled by this loop regardless of depth.
+      #
+      # **Hand-crafted left-associated bind chains**
+      # (`((m >>= f) >>= g) >>= h`, equivalent to `foldl (>>=)` in
+      # Haskell) do *not* enjoy the same guarantee: the left
+      # argument is evaluated by a recursive `evaluate(ma)` call,
+      # so N levels of left-associated `prim_bind` nest N frames on
+      # the Ruby call stack. M9-range code does not produce such
+      # chains (they do not arise from Sapphire's do-notation), but
+      # a Ruby-side caller that builds them explicitly — notably a
+      # `foldl (>>=)` pattern — can hit `SystemStackError` for
+      # sufficiently deep chains. If that ever matters in practice
+      # we would rebalance to the right at `prim_bind` construction
+      # (or rework `evaluate` to an explicit work-stack); right-
+      # associated chains stay tail-consumed in either design.
       def self.evaluate(action)
         current = action
         loop do
-          case current.kind
+          case current.send(:kind)
           when :pure
-            return current.payload
+            return current.send(:payload)
           when :embed
-            raw = current.payload.call
+            raw = current.send(:payload).call
             return Marshal.from_ruby(raw)
           when :bind
-            ma, k = current.payload
+            ma, k = current.send(:payload)
             a = evaluate(ma)
             next_action = k.call(a)
             unless next_action.is_a?(Action)
