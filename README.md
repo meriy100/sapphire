@@ -29,7 +29,10 @@ Ruby スニペットを別スレッドで実行して純粋なパイプライン
 - `crates/sapphire-lsp/` — Language Server 実装。
 - `runtime/` — `sapphire-runtime` gem（Ruby）の置き場（R1 以降で
   populate）。
-- `editor/` — VSCode extension（L7 で populate）。
+- `editors/vscode/` — VSCode extension（L1 scaffold。`docs/impl/10-
+  lsp-scaffold.md` 参照）。
+- `examples/` — サンプル `.sp` プロジェクト。`examples/lsp-smoke/`
+  は LSP scaffold の動作確認用。
 
 ## 開発環境
 
