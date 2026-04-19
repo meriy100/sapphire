@@ -1,0 +1,223 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sapphire",
+  "scopeName": "source.sapphire",
+  "fileTypes": ["sp"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#module-header" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#storage" },
+    { "include": "#type-signature" },
+    { "include": "#ruby-binding" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#reserved-punctuation" },
+    { "include": "#operators" },
+    { "include": "#types" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-dash.sapphire",
+          "begin": "(?<![!#$%&*+./<=>?@\\\\^|~:\\-])--(?![!#$%&*+./<=>?@\\\\^|~:\\-])",
+          "end": "$",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.comment.sapphire" }
+          }
+        },
+        {
+          "name": "comment.block.sapphire",
+          "begin": "\\{-",
+          "end": "-\\}",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.comment.begin.sapphire" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.comment.end.sapphire" }
+          },
+          "patterns": [
+            {
+              "name": "comment.block.sapphire",
+              "begin": "\\{-",
+              "end": "-\\}"
+            }
+          ]
+        }
+      ]
+    },
+    "module-header": {
+      "patterns": [
+        {
+          "match": "\\b(module)\\s+([A-Z][A-Za-z0-9_']*(?:\\.[A-Z][A-Za-z0-9_']*)*)",
+          "captures": {
+            "1": { "name": "keyword.control.module.sapphire" },
+            "2": { "name": "entity.name.namespace.sapphire" }
+          }
+        },
+        {
+          "match": "\\b(import)\\s+(qualified\\s+)?([A-Z][A-Za-z0-9_']*(?:\\.[A-Z][A-Za-z0-9_']*)*)(?:\\s+(as)\\s+([A-Z][A-Za-z0-9_']*))?",
+          "captures": {
+            "1": { "name": "keyword.control.import.sapphire" },
+            "2": { "name": "keyword.control.import.sapphire" },
+            "3": { "name": "entity.name.namespace.sapphire" },
+            "4": { "name": "keyword.control.import.sapphire" },
+            "5": { "name": "entity.name.namespace.sapphire" }
+          }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple.sapphire",
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.sapphire" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.sapphire" }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.sapphire",
+              "match": "\\\\(?:[nrt\\\\\"]|u\\{[0-9a-fA-F]{1,6}\\})"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.sapphire",
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.sapphire" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.sapphire" }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.sapphire",
+              "match": "\\\\(?:[nrt\\\\\"]|u\\{[0-9a-fA-F]{1,6}\\})"
+            },
+            {
+              "name": "invalid.illegal.unknown-escape.sapphire",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.sapphire",
+          "match": "\\b(module|import|hiding|as|qualified|export|where|let|in|if|then|else|case|of|do|forall|class|instance)\\b"
+        }
+      ]
+    },
+    "storage": {
+      "patterns": [
+        {
+          "name": "storage.type.sapphire",
+          "match": "\\b(data|type)\\b"
+        }
+      ]
+    },
+    "type-signature": {
+      "patterns": [
+        {
+          "comment": "Term-level type signature: `name : type`",
+          "match": "^\\s*([a-z_][A-Za-z0-9_']*)\\s*(:)(?!=)(?![!#$%&*+./<=>?@\\\\^|~:\\-])",
+          "captures": {
+            "1": { "name": "entity.name.function.sapphire" },
+            "2": { "name": "keyword.operator.annotation.sapphire" }
+          }
+        }
+      ]
+    },
+    "ruby-binding": {
+      "patterns": [
+        {
+          "comment": "Ruby-embedding `name args... := ...`",
+          "match": "^\\s*([a-z_][A-Za-z0-9_']*)(?=[^\\n]*\\s:=\\s)",
+          "captures": {
+            "1": { "name": "entity.name.function.ruby-embed.sapphire" }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.sapphire",
+          "match": "\\b(True|False)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.integer.sapphire",
+          "match": "\\b[0-9][0-9_]*\\b"
+        }
+      ]
+    },
+    "reserved-punctuation": {
+      "patterns": [
+        {
+          "name": "keyword.operator.ruby-embed.sapphire",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.arrow.sapphire",
+          "match": "->|<-|=>"
+        },
+        {
+          "name": "keyword.operator.list-cons.sapphire",
+          "match": "::"
+        },
+        {
+          "name": "keyword.operator.range.sapphire",
+          "match": "\\.\\."
+        },
+        {
+          "name": "keyword.operator.lambda.sapphire",
+          "match": "\\\\"
+        },
+        {
+          "name": "keyword.operator.at-pattern.sapphire",
+          "match": "@"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.sapphire",
+          "match": "[+\\-*/%=<>!&|:^?~.]+"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "entity.name.type.sapphire",
+          "match": "\\b[A-Z][A-Za-z0-9_']*\\b"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.sapphire",
+          "match": "\\b[a-z_][A-Za-z0-9_']*\\b"
+        }
+      ]
+    }
+  }
+}

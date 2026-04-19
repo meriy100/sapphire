@@ -1,7 +1,7 @@
 {
   "name": "sapphire-vscode",
   "displayName": "Sapphire",
-  "description": "Sapphire language support for Visual Studio Code (L1 scaffold).",
+  "description": "Sapphire language support for Visual Studio Code (syntax, snippets, LSP client).",
   "version": "0.0.0",
   "private": true,
   "publisher": "meriy100",
@@ -14,7 +14,8 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
@@ -30,9 +31,47 @@
         ],
         "extensions": [
           ".sp"
-        ]
+        ],
+        "configuration": "./language-configuration.json"
       }
-    ]
+    ],
+    "grammars": [
+      {
+        "language": "sapphire",
+        "scopeName": "source.sapphire",
+        "path": "./syntaxes/sapphire.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "sapphire",
+        "path": "./snippets/sapphire.code-snippets"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Sapphire",
+      "properties": {
+        "sapphire.lsp.path": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the sapphire-lsp binary. If empty, the extension falls back to the SAPPHIRE_LSP_PATH environment variable, and finally to resolving `sapphire-lsp` from $PATH.",
+          "scope": "machine-overridable"
+        },
+        "sapphire.lsp.log": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug", "trace"],
+          "default": "info",
+          "description": "Log level passed to sapphire-lsp via SAPPHIRE_LSP_LOG. The SAPPHIRE_LSP_LOG environment variable, if set, takes precedence."
+        },
+        "sapphire.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace LSP JSON messages between the VSCode client and sapphire-lsp. Output goes to the 'Sapphire Language Server' output channel."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p .",
