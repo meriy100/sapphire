@@ -55,4 +55,4 @@ CI（`.github/workflows/ci.yml`）でも同じコマンドが走る。
 ## ライセンス
 
 MIT（`LICENSE` 参照）。Rust 生態系慣例の dual-license（`MIT OR
-Apache-2.0`）への移行は `docs/open-questions.md` I-OQ6 で追跡中。
+Apache-2.0`）への移行は `docs/open-questions.md` I-OQ11 で追跡中。

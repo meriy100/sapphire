@@ -148,8 +148,9 @@ TypeScript プロジェクトなので Cargo workspace には含めない。
 ## 今後の OQ の登録方針
 
 本タスク中に新規の未決事項は発生しなかったため、`docs/open-
-questions.md` には I-OQ24 以降の追加は行わない。既存 I-OQ6 は
-本文書で DECIDED にする（実際の tracker 側もこの commit で
+questions.md` に新規 I-OQ を追加しない。既存 I-OQ6（`lsp-types`
+のバージョン pin）と I-OQ7（`tower-lsp` 本家 vs fork）は本文書の
+内容に基づき DECIDED に更新する（tracker 側もこの commit で
 ステータス更新）。
 
 ## 参照
