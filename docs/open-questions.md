@@ -252,6 +252,10 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ67 | LineMap の部分更新 | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §LineMap の差分更新を punt する理由。L3 現状は `apply_change` ごとに `LineMap::new` を呼び直す。巨大ファイル / 高頻度編集で hot path になるなら、`line_starts` を slice で継ぎ合わせる incremental 版に差し替える。`line-index` / `ropey` 採用（I-OQ53）と連動して決める。 |
 | I-OQ68 | `rangeLength` の取り扱い | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §range_length を無視する判断。LSP 3.17 で deprecated、実装ごとに UTF-16 / byte 計算が割れているため L3 では完全に無視。将来、client 側 UTF-16 算出壊れを log で可視化したい要望が出れば、`range` との不一致時に WARN を出す方向で再検討。 |
 | I-OQ69 | client 再送 (resync) プロトコル | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §エラー処理。`apply_change` が失敗して buffer が drift したとき、`workspace/diagnostic/refresh` / 明示的な `textDocument/didOpen` 再送で client に full 再送を促すフック。LSP 3.17 既存メカニズムで賄えるかの調査を含め、resync が必要になった段で決める。 |
+| I-OQ72 | Cross-file goto / workspace scan | DEFERRED-IMPL | `docs/impl/22-lsp-goto-definition.md` §Cross-module / Prelude を扱わない理由。L5 は同一ファイルのみ goto 可能。`import Foo` 先の定義へ飛ぶには workspace ルートから `.sp` を発見・キャッシュする層が必要で、L6 以降で `Document` store を workspace-aware に拡張するときに設計する。 |
+| I-OQ73 | Prelude 定義への goto | DEFERRED-IMPL | `docs/impl/22-lsp-goto-definition.md` §Cross-module / Prelude を扱わない理由。現状 Prelude は `resolver/prelude.rs` の静的テーブルで実体の `.sp` が無い。I-OQ44（Prelude の `.sp` 化）が済むと goto 可能になる。それまでは `None` 返却で諦める。 |
+| I-OQ74 | resolve 部分成功の exposing | DEFERRED-IMPL | `docs/impl/22-lsp-goto-definition.md` §resolve 失敗時の諦め。現行 `resolve` は `Result<_, Vec<ResolveError>>` なので、1 件でも失敗すると reference side table を失う。`(ResolvedProgram, Vec<Error>)` 形に変えれば goto / hover が resolve エラー下でも動く。resolver 本体の API 改修を伴うので、L4 / L6 で手応えを見てから。 |
+| I-OQ75 | Type-position goto の binder 定義 | DEFERRED-IMPL | `docs/impl/22-lsp-goto-definition.md` §Local binding の walk。`Type::Var` を `forall`-quantifier にジャンプさせるか、暗黙 quantifier 位置を指すかが多義的。I6（type inference）で forall / implicit quantifier の扱いが固まってから、L5 の `LocalFinder` を type scope まで拡張する方針で再評価。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -384,5 +388,12 @@ OPEN として追加。user 判断待ち。
 LSP incremental sync 導入に伴い **I-OQ67〜I-OQ69** を §1.5 に
 追加。いずれも `DEFERRED-IMPL`。真の incremental parsing は引き
 続き I-OQ9 で punt。
+
+2026-04-19（L5 タスク、`docs/impl/22-lsp-goto-definition.md`）で、
+LSP goto-definition 導入に伴い **I-OQ72〜I-OQ75** を §1.5 に
+追加。いずれも `DEFERRED-IMPL`。Cross-file goto（I-OQ72）は L6
+以降、Prelude への goto（I-OQ73）は I-OQ44 連動、resolve 部分
+成功（I-OQ74）は L4 / L6 で再評価、type position goto（I-OQ75）は
+I6 完了後に扱う。
 
 新しく OPEN が発生したらここで列挙する運用。
