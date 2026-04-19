@@ -1,0 +1,12 @@
+[package]
+name = "sapphire-lsp"
+description = "Language Server Protocol implementation for the Sapphire language."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+sapphire-core = { path = "../sapphire-core" }

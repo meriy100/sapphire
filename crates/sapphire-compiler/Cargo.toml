@@ -1,0 +1,12 @@
+[package]
+name = "sapphire-compiler"
+description = "The Sapphire compiler: lexer, parser, type checker, and code generator for the Sapphire language."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+sapphire-core = { path = "../sapphire-core" }
