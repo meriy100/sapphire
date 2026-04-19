@@ -152,18 +152,23 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 2 | `impl/r4-ruby-monad` | **R4** Ruby monad primitives 🟢 |
 | 3 | `impl/t2b-tutorial-ch6` | **T2b** tutorial ch6 🟢 |
 
-### ウェーブ 4（I4 着地後）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 4（I4 着地後）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i5-resolver` | **I5** 名前解決 🟡 |
-| 2 | `impl/r5-r6-runtime` | **R5** thread 管理 → **R6** loading 契約 🟡 |
-| 3 | `impl/l2-diagnostics` | **L2** parse-error diagnostics 🟡 |
-| 4 | `impl/t2c-tutorial-advanced` | **T2c** tutorial 発展篇（HKT 隔離章） 🟡 |
-| 5 | （I5 着地後） | **I6a** → **I6b** → **I6c** 型検査 ⬜ |
-| 6 | （L2 着地後） | **L3** document sync ⬜ |
+| 1 | `impl/i5-resolver` | **I5** 名前解決 🟢 |
+| 2 | `impl/r5-r6-runtime` | **R5** thread 管理 → **R6** loading 契約 🟢 |
+| 3 | `impl/l2-diagnostics` | **L2** parse-error diagnostics 🟢 |
+| 4 | `impl/t2c-tutorial-advanced` | **T2c** tutorial 発展篇（HKT 隔離章） 🟢 |
 
-### ウェーブ 5（I6 着地後）
+### ウェーブ 5（I5/L2 着地後）🟡 **進行中（2026-04-19〜）**
+
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i6-typecheck` | **I6a** HM → **I6b** ADT/Record → **I6c** Type classes 🟡 |
+| 2 | `impl/l3-sync` | **L3** document sync（incremental 対応の基礎） 🟡 |
+
+### ウェーブ 6（I6 着地後）⬜ **未着手**
 
 | # | タスク |
 |---|---|
@@ -171,14 +176,18 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 2 | **L4** hover / **L5** goto-def |
 | 3 | **D2** CI cross-compile |
 
-### ウェーブ 6（I7 + R6 着地後、統合）
+（以前の「ウェーブ 6」に相当。ウェーブ 5 を I6/L3 に割り当てた
+ため 1 段後ろへずれた。）
+
+### ウェーブ 7（I7 + R6 着地後、統合）
 
 | # | タスク |
 |---|---|
 | 1 | **I9** M9 end-to-end |
 | 2 | **L6** completion + **L7** VSCode extension |
-| 3 | **T2c** tutorial 発展篇 |
-| 4 | **D3** 初回リリース |
+| 3 | **D3** 初回リリース |
+
+（T2c はウェーブ 4 で先行着地済。）
 
 ## 進捗トラッキング
 
