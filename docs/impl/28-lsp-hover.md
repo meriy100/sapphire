@@ -17,7 +17,7 @@ pipeline を流用する前提も明記しておく。
 | 返却 shape | `Hover { contents: HoverContents::Markup(MarkupContent { kind: Markdown, value }), range: Some(ref_span_range) }` |
 | 解析 | `analyze(text)` → `resolve(module)` → `typeck::infer::check_module` を都度 full-reparse（L3 / L5 と同じ naive 方針） |
 | Position → byte | L2 の `LineMap::byte_offset` をそのまま使用 |
-| Span → 型 | 参照 span の resolution を `HoverTypes { inferred, ctors }` で引く。`inferred` は `InferCtx.inferred: HashMap<String, Scheme>`、`ctors` は `TypeEnv.ctors: HashMap<String, CtorInfo>` |
+| Span → 型 | 参照 span の resolution を `HoverTypes { inferred, ctors, globals }` で引く。`inferred` は `InferCtx.inferred: HashMap<String, Scheme>`、`ctors` は `TypeEnv.ctors: HashMap<String, CtorInfo>`、`globals` は `TypeEnv.globals: HashMap<GlobalId, Scheme>`（prelude operator / 関数、user class method など inferred に載らないエントリをカバー） |
 | Local binder | I6 は per-span の `Ty` side table を出していないため、当座は **名前 + `(local)` タグ + 「型情報未取得」注記** で返す（I-OQ96） |
 | typecheck 失敗時 | `check_module` がエラーでも `ctx.inferred` を projection して返す（partial hover）。hover は「editor セッションで best-effort に出したい」用途のため、clean compile を gate にしない |
 | Range | reference span の narrow な範囲（識別子そのもの）を `LineMap::range` で変換して返す |
@@ -35,7 +35,7 @@ resolve_position_to_hover(uri, pos)
       ├── InferCtx::new(module_name)
       ├── install_prelude(&mut ctx)
       ├── check_module(&mut ctx, &module)  // エラーでも続行
-      └── HoverTypes { inferred, ctors }
+      └── HoverTypes { inferred, ctors, globals }
   6. line_map = build_line_map(text)
   7. byte     = line_map.byte_offset(pos)?
   8. find_hover_info(module, resolved, typed, text, byte, line_map)?
@@ -63,19 +63,32 @@ span** を返すか **型スキームを取るか** だけになる。
 
 ### `HoverTypes` の shape
 
-I6 の `check_module` は **top-level 名ごとの scheme** を
-`InferCtx.inferred: HashMap<String, Scheme>` に蓄積する。一方
-data constructor は `TypeEnv.ctors: HashMap<String, CtorInfo>` に、
-`CtorInfo.scheme` 経由で獲得できる。L4 はこの 2 つを projection し
-た `HoverTypes { inferred, ctors }` を受け取る：
+I6 の `check_module` / `install_prelude` / `register_ast_class` は
+schemes を **複数のテーブル** に分散して書き込む：
+
+| 書き込み先 | 書き込むもの | 書き込む箇所 |
+|---|---|---|
+| `InferCtx.inferred: HashMap<String, Scheme>` | 現在モジュールの top-level value / signature / Ruby-embed のスキーム | `check_module` Phase D / Ruby-embed ループ |
+| `TypeEnv.ctors: HashMap<String, CtorInfo>` | data constructor（user / prelude 両方） | `register_ast_data` / `install_prelude` |
+| `TypeEnv.globals: HashMap<GlobalId, Scheme>` | 上記すべて **に加えて** prelude operator (`+`, `++`, `>>=`, …) / prelude 関数 (`map`, `pure`, …) / user class method | `install_prelude` の `add_prelude` / `register_ast_class` |
+
+特に **prelude operator / prelude 関数 / user class method は
+`inferred` に載らず、`globals` にのみ存在する**。bare name で
+`inferred` を引いても hit しないので、L4 では `GlobalId { module,
+name }` キーで `globals` を引く経路を用意する必要がある。
+
+この分散を踏まえて L4 は 3 projection を projection した
+`HoverTypes { inferred, ctors, globals }` を受け取る：
 
 - `DefKind::Value` / `DefKind::RubyEmbed` / `DefKind::ClassMethod`
-  → `inferred[name]`
+  → `globals[GlobalId(current_module, name)]` → fallback `inferred[name]`
 - `DefKind::Ctor`（user / prelude） → `ctors[name]`
 - `DefKind::DataType` / `DefKind::TypeAlias` / `DefKind::Class`
-  → **scheme なし**、タグのみ表示
-- `DefKind::*` で top 見つからない imported / prelude 名 → `ctors` と
-  `inferred` をそれぞれ bare name で引いて fallback
+  → **scheme なし**、タグのみ表示（fallback の「_型情報未取得_」注記
+  は type-side context では抑制、下記 §Hover content の整形）
+- `DefKind::*` で top 見つからない imported / prelude 名 → `ctors` →
+  `globals[GlobalId("Prelude", name)]`（ないし imported モジュール） →
+  `inferred[name]` の順で bare name / qualified 両方を試行
 
 `HoverTypes` を新しい struct にしたのは：
 
@@ -83,8 +96,14 @@ data constructor は `TypeEnv.ctors: HashMap<String, CtorInfo>` に、
    `HoverTypes` にフィールドを増やすだけで `find_hover_info` の
    signature が変わらないようにするため。
 2. typeck 本体を改変せずに済ませるため。既存の
-   `InferCtx.inferred` と `type_env.ctors` を owning clone で
-   projection するだけで、typeck 側のコード変更なし。
+   `InferCtx.inferred` / `type_env.ctors` / `type_env.globals` を
+   owning clone で projection するだけで、typeck 側のコード変更なし。
+
+**projection か `InferCtx` 全体参照か** — 現状は projection 3 テー
+ブルで足りているが、I6 が新たな side table（per-span `Ty`、class
+instance dict metadata 等）を増やすたびに `HoverTypes` を広げる圧が
+かかる。projection を続けるか `Arc<InferCtx>` 相当を持ち回るかの判
+断は I-OQ100 で追跡。
 
 ### Prelude と同一モジュール名 lookup の整合
 
@@ -92,9 +111,11 @@ data constructor は `TypeEnv.ctors: HashMap<String, CtorInfo>` に、
 class / value を登録してから、`check_module` で
 `ctx.module = module_name`（例：`Main`）に切り替える。L4 は
 resolver の `Resolution::Global(r)` で `r.module.segments ==
-["Prelude"]` を真偽値で判定し、**スキーム自体は bare name で
-`ctors` / `inferred` から引く**。これが出来るのは prelude が
-current `InferCtx` にも同じ名前で登録されているため。
+["Prelude"]` を真偽値で判定し、**スキーム自体は
+`globals[GlobalId("Prelude", r.name)]` で qualified に引く**（prelude
+operator / 関数は `inferred` に載らないため）。ctor は別テーブル
+`ctors` に bare name でも残っているので、`ctors` → `globals` →
+`inferred` の順で lookup し、最初に hit したものを返す。
 
 将来 Prelude を `.sp` 化（I-OQ44）したときは、`check_program` で
 複数モジュールの scheme を並行して保持する形に移行する想定（L6
@@ -119,17 +140,22 @@ _(<context-tag>)_
   - `(top-level value)` — 同一モジュールの value binding
   - `(constructor of `T`)` — user / prelude ctor
   - `(method of class `C`)` — class method
-  - `(`:=` Ruby-embedded binding)` — `:=` binding
+  - `(`:=`-binding)` — `:=` binding（CommonMark renderer に優しい
+    形、バッククォート内に `:=` のみを入れる）
   - `(data type)` / `(type alias)` / `(class)` — 型位置
   - `(local)` — lambda / let / pattern binder
   - `(prelude)` — Prelude の定義
   - `(imported from `M`)` — 他モジュールの import（scheme 無し）
 - **演算子名は symbol のまま**（`+ : Int -> Int -> Int`）書く。
   Haskell の section 記法 `(+)` と混同させないため括弧は付けない。
-- scheme が引けなかった場合（local binder など）は `name` 1 行のみ
-  出し、`_型情報未取得_` を下に添える。hover を silent に消すより
-  「あなたは識別子を正しく認識しています、型情報は今は無いだけです」
-  を見せたほうがデバッグしやすい。
+- scheme が引けなかった場合、**value-side の context に限り**
+  `_型情報未取得_` を下に添える（`Local` / `External` など）。
+  `DataType` / `TypeAlias` / `Class` は設計上 value-level scheme を
+  持たないため、これらの context では fallback 注記を抑制し、タグ
+  だけで完結させる（"scheme が取れなかった" は事実と乖離する）。
+  hover を silent に消さないのは「あなたは識別子を正しく認識して
+  います、型情報は今は無いだけです」を見せてデバッグしやすくする
+  ため。
 
 ## Local binder の型表示を punt する
 
@@ -181,6 +207,12 @@ typeck エラーで file 全体の hover が消えることはない：
   `b` …）や `forall` 量化子位置での hover はまだ name-only。
   L5 goto の I-OQ75 と paired で、I6 が `forall` / 暗黙
   quantifier の束縛位置を固めてから拡張する。
+- **I-OQ100 `HoverTypes` の projection 戦略**：現状は `inferred`
+  / `ctors` / `globals` の 3 projection を clone する。I6 が新規
+  side table（per-span `Ty`、dict metadata 等）を追加するたびに
+  `HoverTypes` を広げる圧がかかる。projection を続けるか、LSP
+  セッション全体で `Arc<InferCtx>` を抱える形に切り替えるかの
+  判断条件を I-OQ57（typed AST の持ち方）着地時に決める。
 
 ## 今後の拡張
 
@@ -205,4 +237,4 @@ typeck エラーで file 全体の hover が消えることはない：
 - `18-typecheck-hm.md` / `19-typecheck-adt.md` / `20-typecheck-classes.md`
   — I6 の HM inferencer と typeck 出力
 - `../open-questions.md` §1.5 — I-OQ9 / I-OQ57 / I-OQ73 / I-OQ75 /
-  I-OQ96〜I-OQ99
+  I-OQ96〜I-OQ100

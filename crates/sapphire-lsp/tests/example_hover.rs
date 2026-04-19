@@ -122,6 +122,35 @@ fn example_hover_prelude_just_shows_prelude_tag() {
 }
 
 #[test]
+fn example_hover_prelude_append_operator_shows_scheme() {
+    // Regression for reviewer must-fix #1: `++` lives in
+    // `type_env.globals` under `GlobalId::new("Prelude", "++")` and
+    // nowhere else. The hover must surface the scheme, not just the
+    // `(prelude)` tag + "型情報未取得" fallback.
+    let src = read_example();
+    let analysis = analyze(&src);
+    let module = analysis.module.expect("module present");
+    let resolved = resolve(module.clone()).expect("resolve ok");
+    let typed = collect_hover_types(&resolved.env.id.display(), &module);
+    let line_map = build_line_map(&src);
+
+    // `in greeting ++ name ++ "!"` — the first `++`.
+    let use_off = byte_of(&src, "greeting ++ name") + "greeting ".len();
+    let hover = find_hover_info(&module, &resolved, &typed, &src, use_off, &line_map)
+        .expect("hover present");
+    let md = markdown_body(&hover);
+    assert!(md.contains("(prelude)"), "expected prelude tag: {md}");
+    assert!(
+        md.contains("++ : String -> String -> String"),
+        "expected `++` scheme line: {md}",
+    );
+    assert!(
+        !md.contains("_型情報未取得_"),
+        "`++` scheme must be populated, got fallback note: {md}",
+    );
+}
+
+#[test]
 fn example_hover_local_let_binder_shows_local_tag() {
     let src = read_example();
     let analysis = analyze(&src);

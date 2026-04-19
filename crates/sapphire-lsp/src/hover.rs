@@ -47,9 +47,9 @@
 
 use std::collections::HashMap;
 
-use sapphire_compiler::resolver::{DefKind, ModuleEnv, Resolution, ResolvedModule};
+use sapphire_compiler::resolver::{DefKind, ModuleEnv, Resolution, ResolvedModule, ResolvedRef};
 use sapphire_compiler::typeck::infer::{InferCtx, check_module, install_prelude};
-use sapphire_compiler::typeck::{CtorInfo, Scheme};
+use sapphire_compiler::typeck::{CtorInfo, GlobalId, Scheme};
 use sapphire_core::ast::Module as AstModule;
 use tower_lsp::lsp_types::{Hover, HoverContents, MarkupContent, MarkupKind};
 
@@ -58,22 +58,41 @@ use crate::diagnostics::LineMap;
 
 /// Read-only view of the typeck output the hover handler needs.
 ///
-/// `inferred` carries every top-level value / `:=` binding's scheme
-/// (the existing `InferCtx.inferred` map), and `ctors` carries every
-/// registered data constructor's scheme (a `(String → Scheme)`
-/// projection of `TypeEnv.ctors`). Both are populated by
-/// [`collect_hover_types`]; the wrapper struct keeps the
-/// `find_hover_info` signature stable when I6 later grows a local-
-/// type side table (tracked as I-OQ96).
+/// Three projections, each keyed differently:
+///
+/// - `inferred` — current-module top-level value / `:=` bindings,
+///   keyed by bare name (mirrors `InferCtx.inferred`).
+/// - `ctors` — every registered data constructor's scheme, keyed by
+///   bare ctor name (a projection of `TypeEnv.ctors`).
+/// - `globals` — **every** globally-registered scheme, keyed by
+///   fully-qualified `GlobalId { module, name }`. This is the
+///   authoritative home for prelude operators (`+`, `++`, `>>=`),
+///   prelude functions (`map`, `pure`), and user-defined class
+///   methods, which `register_ast_class` writes into
+///   `TypeEnv.globals` but **not** into `InferCtx.inferred`. Without
+///   projecting `globals`, hover over those names would only see the
+///   name and drop the scheme.
+///
+/// All three are populated by [`collect_hover_types`]; the wrapper
+/// struct keeps the `find_hover_info` signature stable when I6 later
+/// grows a local-type side table (tracked as I-OQ96). Whether to keep
+/// projection or switch to holding the full `InferCtx` is tracked as
+/// I-OQ100.
 #[derive(Debug, Clone, Default)]
 pub struct HoverTypes {
-    /// Inferred top-level schemes, keyed by binding name.
+    /// Inferred top-level schemes, keyed by binding name (current
+    /// module only).
     pub inferred: HashMap<String, Scheme>,
     /// Data-constructor metadata, keyed by ctor name. Distinct from
     /// `inferred` because ctors live in a separate namespace slot in
     /// `TypeEnv` and the I6 `check_module` entry point only writes
     /// value-binding schemes into `inferred`.
     pub ctors: HashMap<String, CtorInfo>,
+    /// Fully-qualified global schemes, keyed by `GlobalId`. Covers
+    /// prelude operators / functions (under `"Prelude"`) and user
+    /// class methods (under the declaring module's name) which
+    /// `inferred` alone does not record.
+    pub globals: HashMap<GlobalId, Scheme>,
 }
 
 impl HoverTypes {
@@ -107,6 +126,7 @@ pub fn collect_hover_types(module_name: &str, module: &AstModule) -> HoverTypes 
     HoverTypes {
         inferred: ctx.inferred,
         ctors: ctx.type_env.ctors,
+        globals: ctx.type_env.globals,
     }
 }
 
@@ -175,7 +195,7 @@ enum HoverContext {
     Constructor { type_name: String },
     /// Class method bound to a class name.
     ClassMethod { class_name: String },
-    /// `:=` Ruby-embedded binding.
+    /// Ruby-embedded (`:=`) binding.
     RubyEmbed,
     /// Nominal data type in type position.
     DataType,
@@ -211,15 +231,17 @@ fn build_hover_info(
             if let Some(def) = env.top_lookup(&r.name, r.namespace) {
                 return Some(HoverInfo {
                     name: r.name.clone(),
-                    scheme: scheme_for_def(typed, &def.kind, &r.name),
-                    context: context_from_def(&def.kind, is_prelude, &r.module.display()),
+                    scheme: scheme_for_def(typed, r, &def.kind),
+                    context: context_from_def(&def.kind, is_prelude),
                 });
             }
-            // 2. Imported / prelude name. Fall back to the ctor and
-            //    inferred tables keyed by bare name; the module does
-            //    not own the def but the typeck context still carries
-            //    the scheme (prelude was installed in the same
-            //    `InferCtx`).
+            // 2. Imported / prelude name. Try the qualified global
+            //    table first — this is where `install_prelude` and
+            //    `register_ast_class` deposit prelude operators,
+            //    prelude functions, and class methods. Fall back to
+            //    the ctor / inferred tables keyed by bare name for
+            //    anything that slipped through (e.g. user-defined
+            //    `import` re-exports under the same `InferCtx`).
             if let Some(cinfo) = typed.ctors.get(&r.name) {
                 let type_name = cinfo.type_name.clone();
                 return Some(HoverInfo {
@@ -229,6 +251,19 @@ fn build_hover_info(
                         HoverContext::Prelude
                     } else {
                         HoverContext::Constructor { type_name }
+                    },
+                });
+            }
+            if let Some(scheme) = scheme_for_global(typed, r) {
+                return Some(HoverInfo {
+                    name: r.name.clone(),
+                    scheme: Some(scheme),
+                    context: if is_prelude {
+                        HoverContext::Prelude
+                    } else {
+                        HoverContext::External {
+                            module: r.module.display(),
+                        }
                     },
                 });
             }
@@ -263,19 +298,34 @@ fn build_hover_info(
     }
 }
 
-fn scheme_for_def(typed: &HoverTypes, kind: &DefKind, name: &str) -> Option<String> {
+/// Look up a `ResolvedRef` in the qualified globals table. The
+/// resolver's `ModuleId.segments` is dot-joined to match the
+/// `GlobalId.module: String` key `InferCtx` uses (prelude entries
+/// land under `"Prelude"`; user-module entries land under the
+/// module's `ctx.module` which is set via `InferCtx::new(&id.display())`
+/// in [`collect_hover_types`]).
+fn scheme_for_global(typed: &HoverTypes, r: &ResolvedRef) -> Option<String> {
+    let gid = GlobalId::new(r.module.display(), r.name.clone());
+    typed.globals.get(&gid).map(|s| s.pretty())
+}
+
+fn scheme_for_def(typed: &HoverTypes, r: &ResolvedRef, kind: &DefKind) -> Option<String> {
     match kind {
+        // Value / RubyEmbed bindings live in `inferred`; class methods
+        // are registered only in `type_env.globals` (and not in
+        // `inferred`), so try the qualified global first and fall back
+        // to the bare-name `inferred` lookup.
         DefKind::Value | DefKind::RubyEmbed | DefKind::ClassMethod { .. } => {
-            typed.inferred.get(name).map(|s| s.pretty())
+            scheme_for_global(typed, r).or_else(|| typed.inferred.get(&r.name).map(|s| s.pretty()))
         }
-        DefKind::Ctor { .. } => typed.ctors.get(name).map(|c| c.scheme.pretty()),
+        DefKind::Ctor { .. } => typed.ctors.get(&r.name).map(|c| c.scheme.pretty()),
         // Types / aliases / classes live in the type namespace and
         // have no value-level scheme.
         DefKind::DataType | DefKind::TypeAlias | DefKind::Class => None,
     }
 }
 
-fn context_from_def(kind: &DefKind, is_prelude: bool, _module: &str) -> HoverContext {
+fn context_from_def(kind: &DefKind, is_prelude: bool) -> HoverContext {
     if is_prelude {
         return HoverContext::Prelude;
     }
@@ -321,11 +371,25 @@ fn render_markdown(info: &HoverInfo) -> String {
     }
     out.push_str("```\n");
     out.push_str(&context_line(&info.context));
-    if info.scheme.is_none() {
+    // Suppress the "type info not retrieved" fallback for contexts
+    // where a value-level scheme is meaningless by design (type-side
+    // names). Surfacing the note there is a lie: the type checker
+    // did its job — the entity simply has no scheme.
+    if info.scheme.is_none() && context_expects_scheme(&info.context) {
         out.push_str("\n\n");
         out.push_str("_型情報未取得_");
     }
     out
+}
+
+/// Whether a given hover context is expected to carry a value-level
+/// scheme. Type-side references (`data` / `type` / `class`) do not,
+/// and showing a "scheme missing" note for them is misleading.
+fn context_expects_scheme(ctx: &HoverContext) -> bool {
+    !matches!(
+        ctx,
+        HoverContext::DataType | HoverContext::TypeAlias | HoverContext::Class
+    )
 }
 
 fn context_line(ctx: &HoverContext) -> String {
@@ -338,7 +402,7 @@ fn context_line(ctx: &HoverContext) -> String {
         HoverContext::ClassMethod { class_name } => {
             format!("_(method of class `{class_name}`)_")
         }
-        HoverContext::RubyEmbed => "_(`:=` Ruby-embedded binding)_".to_string(),
+        HoverContext::RubyEmbed => "_(`:=`-binding)_".to_string(),
         HoverContext::DataType => "_(data type)_".to_string(),
         HoverContext::TypeAlias => "_(type alias)_".to_string(),
         HoverContext::Class => "_(class)_".to_string(),
@@ -463,6 +527,78 @@ two = 1 + 1
             .expect("hover present");
         let md = markdown(&hover);
         assert!(md.contains("(prelude)"), "expected prelude tag: {md}");
+        // Must-fix #1: the scheme for `+` lives in `type_env.globals`
+        // under `GlobalId::new("Prelude", "+")`; the hover must
+        // surface it rather than the bare-name fallback.
+        assert!(
+            md.contains("+ : Int -> Int -> Int"),
+            "expected `+` scheme: {md}",
+        );
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "prelude operator scheme must be populated, got fallback note: {md}",
+        );
+    }
+
+    #[test]
+    fn hover_for_prelude_list_append_shows_scheme() {
+        // `++` is registered as a prelude global whose scheme lives
+        // only in `type_env.globals`. Must-fix #1 regression.
+        let src = "\
+module M where
+
+greet : String
+greet = \"hi \" ++ \"there\"
+";
+        let (module, resolved, typed) = prepare(src);
+        let map = build_line_map(src);
+        let append_off = byte_first(src, "++");
+        let hover = find_hover_info(&module, &resolved, &typed, src, append_off, &map)
+            .expect("hover present");
+        let md = markdown(&hover);
+        assert!(md.contains("(prelude)"), "expected prelude tag: {md}");
+        assert!(
+            md.contains("++ : String -> String -> String"),
+            "expected `++` scheme: {md}",
+        );
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "`++` scheme must be populated: {md}",
+        );
+    }
+
+    #[test]
+    fn hover_for_user_class_method_shows_scheme() {
+        // Must-fix #2: user-defined class methods land in
+        // `type_env.globals` keyed by the declaring module, but NOT
+        // in `InferCtx.inferred`. The hover (exercised at a *use*
+        // site of the method) must follow the global table to
+        // recover the scheme.
+        let src = "\
+module M where
+
+class MyEq a where
+  eqq : a -> a -> Bool
+
+useEq : MyEq a => a -> a -> Bool
+useEq x y = eqq x y
+";
+        let (module, resolved, typed) = prepare(src);
+        let map = build_line_map(src);
+        // Point at the `eqq` occurrence in `useEq x y = eqq x y`.
+        let method_off = byte_first(src, "= eqq x y") + 2;
+        let hover = find_hover_info(&module, &resolved, &typed, src, method_off, &map)
+            .expect("hover present");
+        let md = markdown(&hover);
+        assert!(
+            md.contains("method of class `MyEq`"),
+            "expected class method tag: {md}",
+        );
+        assert!(md.contains("eqq :"), "expected method scheme line: {md}");
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "class method scheme must be populated: {md}",
+        );
     }
 
     #[test]
@@ -556,6 +692,13 @@ mkp = P 1 2
         let md = markdown(&hover);
         assert!(md.contains("(data type)"), "expected data tag: {md}");
         assert!(md.contains("Pair"), "expected type name: {md}");
+        // Must-fix #3: data types are type-side and have no
+        // value-level scheme by design — the hover must not append
+        // the "type info not retrieved" fallback note.
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "data type hover must not emit scheme-missing fallback: {md}",
+        );
     }
 
     #[test]
@@ -603,6 +746,39 @@ mkage = 0
             find_hover_info(&module, &resolved, &typed, src, use_off, &map).expect("hover present");
         let md = markdown(&hover);
         assert!(md.contains("(type alias)"), "expected alias tag: {md}");
+        // Must-fix #3: aliases are type-side and carry no scheme.
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "type alias hover must not emit scheme-missing fallback: {md}",
+        );
+    }
+
+    #[test]
+    fn hover_for_class_reference_in_context_suppresses_fallback() {
+        // A class name appearing in a class context `C a => ...`
+        // reaches the hover as a type-side reference. Must-fix #3
+        // covers this.
+        let src = "\
+module M where
+
+class Show a where
+  showMe : a -> String
+
+shout : Show a => a -> String
+shout x = showMe x
+";
+        let (module, resolved, typed) = prepare(src);
+        let map = build_line_map(src);
+        // Point at the `Show` in the signature context.
+        let use_off = byte_first(src, "Show a =>");
+        let hover =
+            find_hover_info(&module, &resolved, &typed, src, use_off, &map).expect("hover present");
+        let md = markdown(&hover);
+        assert!(md.contains("(class)"), "expected class tag: {md}");
+        assert!(
+            !md.contains("_型情報未取得_"),
+            "class hover must not emit scheme-missing fallback: {md}",
+        );
     }
 
     #[test]
@@ -667,7 +843,7 @@ main = greet
         assert!(md.contains("greet : "), "expected scheme line: {md}");
         assert!(md.contains("Ruby"), "expected Ruby in type: {md}");
         assert!(
-            md.contains("Ruby-embedded binding") || md.contains("top-level value"),
+            md.contains("`:=`-binding") || md.contains("top-level value"),
             "expected embed/top-level tag: {md}",
         );
     }
@@ -711,5 +887,45 @@ y = x
         assert!(md.contains("foo : Int -> Int"));
         assert!(md.contains("(top-level value)"));
         assert!(!md.contains("_型情報未取得_"));
+    }
+
+    #[test]
+    fn render_markdown_suppresses_fallback_for_type_side_contexts() {
+        // Must-fix #3 renderer pin: `DataType` / `TypeAlias` / `Class`
+        // never carry a scheme, and the fallback note must be
+        // suppressed for them.
+        for ctx in [
+            HoverContext::DataType,
+            HoverContext::TypeAlias,
+            HoverContext::Class,
+        ] {
+            let info = HoverInfo {
+                name: "T".to_string(),
+                scheme: None,
+                context: ctx.clone(),
+            };
+            let md = render_markdown(&info);
+            assert!(
+                !md.contains("_型情報未取得_"),
+                "fallback must be suppressed for {ctx:?}, got:\n{md}",
+            );
+        }
+    }
+
+    #[test]
+    fn render_markdown_keeps_fallback_for_local_context() {
+        // Local binders legitimately have no scheme today (I-OQ96);
+        // the fallback note must still appear for them so the UX
+        // signal stays.
+        let info = HoverInfo {
+            name: "x".to_string(),
+            scheme: None,
+            context: HoverContext::Local,
+        };
+        let md = render_markdown(&info);
+        assert!(
+            md.contains("_型情報未取得_"),
+            "expected local fallback: {md}"
+        );
     }
 }

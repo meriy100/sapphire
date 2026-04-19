@@ -52,7 +52,7 @@ I5 の reference side table と I6 の `HashMap<String, Scheme>`
   ```
   `_(top-level value)_`
 - **Ruby-embedded (`:=`) binding** — `rubyPuts`。シグネチャの
-  スキームが出て、タグは `_(\`:=\` Ruby-embedded binding)_`。
+  スキームが出て、タグは `_(\`:=\`-binding)_`。
 - **Constructor（user-defined）** — `A`, `B`。
   ```
   A : T
