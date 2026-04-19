@@ -118,22 +118,52 @@ impl InferCtx {
     /// constraints promoted into the context (only those mentioning
     /// generalised vars; free-in-env constraints are left in
     /// `self.wanted`).
-    pub fn generalize(&mut self, sub: &Subst, ty: &Ty) -> Scheme {
+    ///
+    /// The caller may pass `exclude_name` to suppress a specific local
+    /// (or global) binding from the env-FV computation. This matters
+    /// when the binding being generalised has a *provisional* entry in
+    /// the env that points to the very type variable(s) we want to
+    /// quantify over. Without that exclusion, e.g. `let f x = x in ...`
+    /// pre-binds `f : mono(α)` into the locals frame, the lambda body
+    /// resolves α to `β → β`, and generalize then sees α (now `β → β`)
+    /// in env_fvs through the self-slot — so β leaks into env_fvs and
+    /// `f` is monomorphised. Excluding the self-slot makes let-poly
+    /// behave correctly without relying on later substitution
+    /// coincidences.
+    pub fn generalize_excluding(
+        &mut self,
+        sub: &Subst,
+        ty: &Ty,
+        exclude_name: Option<&str>,
+    ) -> Scheme {
         let ty = sub.apply(ty);
         // Free vars of ty.
         let mut ty_fvs: Vec<u32> = Vec::new();
         ty.free_vars(&mut ty_fvs);
 
-        // Free vars of the enclosing env (locals + globals).
+        // Free vars of the enclosing env (locals + globals) — minus
+        // the entry named `exclude_name`, when one is requested and
+        // present in the innermost local frame (for let-bindings) or
+        // the current-module globals (for provisional top-level
+        // slots).
         let mut env_fvs: HashSet<u32> = HashSet::new();
         for frame in &self.type_env.locals {
-            for s in frame.values() {
+            for (n, s) in frame {
+                if exclude_name.map(|x| x == n.as_str()).unwrap_or(false) {
+                    continue;
+                }
                 collect_scheme_free(&sub.apply_scheme(s), &mut env_fvs);
             }
         }
         // Only the currently-building globals matter; already-finalized
         // globals are closed and free-of-tvars after generalisation.
-        for s in self.type_env.globals.values() {
+        for (g, s) in &self.type_env.globals {
+            if exclude_name
+                .map(|x| x == g.name.as_str() && g.module == self.module)
+                .unwrap_or(false)
+            {
+                continue;
+            }
             collect_scheme_free(&sub.apply_scheme(s), &mut env_fvs);
         }
 
@@ -185,6 +215,15 @@ impl InferCtx {
             context,
             body,
         }
+    }
+
+    /// Convenience wrapper: generalise without excluding any binding.
+    ///
+    /// Callers that are about to finalise a specific name's scheme
+    /// should prefer [`generalize_excluding`] with `Some(name)` to
+    /// avoid the self-slot pinning problem described on that method.
+    pub fn generalize(&mut self, sub: &Subst, ty: &Ty) -> Scheme {
+        self.generalize_excluding(sub, ty, None)
     }
 
     pub fn add_wanted(&mut self, c: Constraint, span: Span) {
@@ -625,6 +664,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec!["/=".into()],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(eq);
 
@@ -652,6 +692,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec!["<".into(), ">".into(), "<=".into(), ">=".into()],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(ord);
 
@@ -669,6 +710,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec![],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(show);
 
@@ -694,6 +736,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec![],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(functor);
 
@@ -723,6 +766,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec![],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(applicative);
 
@@ -765,6 +809,7 @@ pub fn install_prelude(ctx: &mut InferCtx) {
             m
         },
         defaults: vec!["return".into(), ">>".into()],
+        home_module: "Prelude".into(),
     };
     ctx.class_env.register_class(monad);
 
@@ -1360,6 +1405,7 @@ fn register_data(
             name: name.into(),
             params: param_strings.clone(),
             ctor_names,
+            home_module: "Prelude".into(),
         },
     );
 
@@ -1603,6 +1649,7 @@ fn register_ast_data(ctx: &mut InferCtx, d: &DataDecl) -> Result<(), TypeError> 
             name: d.name.clone(),
             params: d.type_params.clone(),
             ctor_names: Vec::new(),
+            home_module: ctx.module.clone(),
         },
     );
 
@@ -1682,6 +1729,46 @@ fn register_ast_alias(ctx: &mut InferCtx, a: &TypeAlias) -> Result<(), TypeError
 fn register_ast_class(ctx: &mut InferCtx, c: &ClassDecl) -> Result<(), TypeError> {
     let mut superclasses: Vec<String> = Vec::new();
     for ctx_c in &c.context {
+        // Spec 07 §Class declarations: "Superclass constraints come
+        // before the class head" and constrain the class's own type
+        // variable. A superclass that mentions a different variable
+        // (e.g. `class Foo b => Ord a where ...`) is ill-formed.
+        if ctx_c.args.len() != 1 {
+            return Err(TypeError::new(
+                TypeErrorKind::InvalidSuperclassContext {
+                    class: c.name.clone(),
+                    expected: c.type_var.clone(),
+                    got: format!(
+                        "superclass `{}` with {} argument(s)",
+                        ctx_c.class_name,
+                        ctx_c.args.len()
+                    ),
+                },
+                ctx_c.span,
+            ));
+        }
+        match &ctx_c.args[0] {
+            AstType::Var { name, .. } if name == &c.type_var => {
+                // OK — constrains the class's own tvar.
+            }
+            other => {
+                let got = match other {
+                    AstType::Var { name, .. } => format!("type variable `{name}`"),
+                    _ => format!(
+                        "non-variable type argument in superclass `{}`",
+                        ctx_c.class_name
+                    ),
+                };
+                return Err(TypeError::new(
+                    TypeErrorKind::InvalidSuperclassContext {
+                        class: c.name.clone(),
+                        expected: c.type_var.clone(),
+                        got,
+                    },
+                    ctx_c.span,
+                ));
+            }
+        }
         superclasses.push(ctx_c.class_name.clone());
     }
     let tv = TyVar {
@@ -1782,6 +1869,7 @@ fn register_ast_class(ctx: &mut InferCtx, c: &ClassDecl) -> Result<(), TypeError
         superclasses,
         methods,
         defaults,
+        home_module: ctx.module.clone(),
     });
     Ok(())
 }
@@ -1850,21 +1938,54 @@ fn register_instance_head(
         });
     }
 
-    // Orphan check: either the class or the head-constructor must
-    // live in this module (or, for prelude built-ins, we relax since
-    // user modules add instances for their own data types).
+    // Orphan check (spec 07 §Orphan instances, strict).
+    //
+    // An `instance C T` is an orphan iff neither `C` nor the outermost
+    // type constructor of `T` is declared in the same module as this
+    // instance. Built-in prelude types (e.g. `Int`, `String`) have
+    // `home_module = "Prelude"`; built-in class `home_module` is also
+    // `"Prelude"`. For the current module to admit an instance, one
+    // of the following must hold:
+    //   - the class was declared here (`class_home == ctx.module`), OR
+    //   - the head's outer ctor was declared here, OR
+    //   - the instance declares a new class/data in this module (both
+    //     cases already covered by the two predicates above via
+    //     `_all_decls`, for symmetry with the pre-home_module code).
+    //
+    // Records (structural types, `head_con = None`) have no outer
+    // ctor; such instances must rely on the class being local.
+    let class_home: Option<String> = ctx
+        .class_env
+        .classes
+        .get(&inst.name)
+        .map(|ci| ci.home_module.clone());
     let head_ctor = head_ty.head_con();
-    let class_home = ctx.module.clone(); // we don't track per-class module yet; treat all classes as if defined in user module.
-    let _ = class_home;
-    if let Some(hc) = head_ctor {
-        let class_is_ours = ctx.class_env.classes.contains_key(&inst.name)
-            && (is_user_class(&inst.name, _all_decls) || is_user_data(hc, _all_decls));
-        if !class_is_ours && !is_user_data(hc, _all_decls) && !is_user_class(&inst.name, _all_decls)
-        {
-            // Only ban orphans when BOTH class and type are from prelude.
-            // User-land instances for prelude types/classes must co-locate.
-            // A stricter check is deferred; for M9 this is permissive.
+    let head_home: Option<String> = head_ctor.and_then(|name| {
+        if let Some(di) = ctx.type_env.datas.get(name) {
+            Some(di.home_module.clone())
+        } else if is_builtin_type(name) {
+            Some("Prelude".to_string())
+        } else {
+            None
         }
+    });
+    // Accept if either home matches the current module, or if the
+    // class / data is being freshly declared in this module (the
+    // two decl predicates keep working for module-internal
+    // re-declarations that pre-date `home_module`).
+    let class_local =
+        class_home.as_deref() == Some(ctx.module.as_str()) || is_user_class(&inst.name, _all_decls);
+    let head_local = head_home.as_deref() == Some(ctx.module.as_str())
+        || head_ctor
+            .map(|n| is_user_data(n, _all_decls))
+            .unwrap_or(false);
+    if !class_local && !head_local {
+        return Err(TypeError::new(
+            TypeErrorKind::OrphanInstance {
+                class: inst.name.clone(),
+            },
+            inst.span,
+        ));
     }
 
     // Collect already-registered instances for overlap check.
@@ -2197,7 +2318,13 @@ fn check_value_binding(
         }
         s
     } else {
-        ctx.generalize(&global_sub, &expected_ty)
+        // Exclude the provisional self-slot inserted for this name in
+        // phase C of `check_module`. Without the exclusion, the
+        // provisional `Scheme::mono(Var(tv))` would pin this
+        // binding's fresh type variables into env_fvs (via substitution
+        // after inference), breaking generalisation. See
+        // `InferCtx::generalize_excluding`'s rationale.
+        ctx.generalize_excluding(&global_sub, &expected_ty, Some(name))
     };
 
     Ok(scheme)
@@ -2545,7 +2672,11 @@ fn infer_expr(ctx: &mut InferCtx, expr: &Expr) -> Result<(Ty, Subst), TypeError>
             let (vty, s1) = infer_expr(ctx, &synthesised)?;
             let s2 = unify(&s1.apply(&vty), &s1.apply(&fresh_tv), value.span())?;
             let sub = s2.compose(&s1);
-            let scheme = ctx.generalize(&sub, &fresh_tv);
+            // Exclude the just-bound self-slot (Scheme::mono(fresh_tv))
+            // from env_fvs, otherwise the let-binding can never be
+            // generalised: its mono scheme body shares tvars with the
+            // very type we are trying to quantify over.
+            let scheme = ctx.generalize_excluding(&sub, &fresh_tv, Some(name));
             // Replace the local binding with the generalized scheme.
             ctx.type_env.bind_local(name, scheme);
             let (bty, s3) = infer_expr(ctx, body)?;

@@ -69,6 +69,95 @@ fn hm_let_polymorphism() {
     assert_eq!(scheme_of(&m, "main"), "String");
 }
 
+/// Regression: `let`-bound identity must actually generalise so its
+/// two use sites see disjoint type variables. Without excluding the
+/// binding's own self-slot from env_fvs in `generalize`, `f` would
+/// stay monomorphic (`α → α` pinned by the very slot that points at
+/// `α`) and the record would typecheck only because of the
+/// compose-then-shadow accident inside `Subst::compose`. Here we pair
+/// `f 1` with `f "hi"` into a record so that **both** uses appear in
+/// the same inferred type, making any lingering pin observable.
+#[test]
+fn let_generalization_two_uses_in_record() {
+    let src = "main = let f x = x in { a = f 1, b = f \"hi\" }";
+    let m = check(src).unwrap();
+    let s = scheme_of(&m, "main");
+    assert!(s.contains("a : Int"), "expected `a : Int` in {s}");
+    assert!(s.contains("b : String"), "expected `b : String` in {s}");
+}
+
+/// Regression: `let f x = x in (f 1) + (length (f \"hi\"))` uses `f`
+/// at two concrete types inside one expression. With a monomorphised
+/// `f`, one of the two App sites would force a `String`↔`Int` clash
+/// that is NOT silently hidden by `Subst::compose`-with-earlier-wins,
+/// because both uses flow through the same surrounding context
+/// (`+`) into the same residual type. With proper let-generalisation,
+/// `f` instantiates to fresh tvars at each use and both typecheck.
+#[test]
+fn let_generalization_polymorphic_uses_both_observed() {
+    // Using prelude: `length : List a -> Int`. Build a list literal
+    // of String via `f "hi"`.
+    let src = "main = let f x = x in (f 1) + length [ f \"hi\" ]";
+    let m = check(src).unwrap();
+    assert_eq!(scheme_of(&m, "main"), "Int");
+}
+
+/// Direct pin on `InferCtx::generalize_excluding`: pre-bind a name
+/// to `Scheme::mono(Var(α))`, then generalise `Var(α) -> Var(α)` for
+/// that same name. With `exclude_name = Some(name)` the env_fvs
+/// must NOT include `α`, so the result is `forall α. α -> α`.
+/// Without the exclusion, `α` leaks into env_fvs via the self-slot
+/// and the result becomes a monotype.
+#[test]
+fn generalize_excluding_quantifies_past_self_slot() {
+    use crate::typeck::infer::InferCtx;
+    let mut ctx = InferCtx::new("Test");
+    // Fresh α, pre-bind `f : mono(α)` into a local frame to mirror
+    // the `Expr::Let` entry state.
+    ctx.type_env.push_locals();
+    let alpha = ctx.fresh();
+    let alpha_ty = Ty::Var(alpha.clone());
+    ctx.type_env.bind_local("f", Scheme::mono(alpha_ty.clone()));
+    // Body type after unification: α -> α (α is free in env only via
+    // the self-slot we just inserted).
+    let body_ty = Ty::fun(alpha_ty.clone(), alpha_ty.clone());
+    let sub = Subst::single(alpha.id, body_ty.clone());
+
+    // Without exclusion — α leaks from the self-slot, so we cannot
+    // quantify α.
+    let mono_scheme = ctx.generalize(&sub, &alpha_ty);
+    assert!(mono_scheme.vars.is_empty(), "self-slot should pin α");
+
+    // With exclusion on `f` — α is free and we get `forall α. α -> α`.
+    let poly_scheme = ctx.generalize_excluding(&sub, &alpha_ty, Some("f"));
+    assert_eq!(poly_scheme.vars.len(), 1);
+    assert!(
+        poly_scheme.pretty().contains("forall"),
+        "expected forall in {}",
+        poly_scheme.pretty()
+    );
+    ctx.type_env.pop_locals();
+}
+
+/// Regression: top-level `id2 x = x` must generalise for the two use
+/// sites `a = id2 1` / `b = id2 "x"` below to get distinct monotypes.
+/// The existing `generalization_id_two_uses` test already covers this
+/// in practice; this test additionally pins that the scheme of `id2`
+/// itself is polymorphic (contains `forall`), not `α → α` for some
+/// already-bound α.
+#[test]
+fn let_generalization_top_level_id_is_polymorphic() {
+    let src = "
+id2 x = x
+a = id2 1
+b = id2 \"x\"
+";
+    let m = check(src).unwrap();
+    assert!(scheme_of(&m, "id2").contains("forall"));
+    assert_eq!(scheme_of(&m, "a"), "Int");
+    assert_eq!(scheme_of(&m, "b"), "String");
+}
+
 #[test]
 fn hm_if_branches_must_match() {
     let src = "x = if True then 1 else \"hi\"";
@@ -804,6 +893,102 @@ fn string_append_chain() {
     let src = "s = \"a\" ++ \"b\" ++ \"c\"";
     let m = check(src).unwrap();
     assert_eq!(scheme_of(&m, "s"), "String");
+}
+
+/// Spec 07 §Class declarations: a superclass context must constrain
+/// the class's own type variable. `class Foo b => Bar a where ...`
+/// is ill-formed because `b` is not the class-bound variable.
+#[test]
+fn class_superclass_must_match_tvar() {
+    let src = "
+class Foo b => Bar a where
+  bar : a -> a
+";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.iter()
+            .any(|e| matches!(e.kind, TypeErrorKind::InvalidSuperclassContext { .. })),
+        "expected InvalidSuperclassContext, got {err:?}"
+    );
+}
+
+/// Well-formed `class Eq a => Ord a where ...` still passes.
+#[test]
+fn class_superclass_on_own_tvar_ok() {
+    let src = "
+class MyEq a where
+  myeq : a -> a -> Bool
+
+class MyEq a => MyOrd a where
+  mycompare : a -> a -> Ordering
+
+instance MyEq Int where
+  myeq x y = True
+
+instance MyOrd Int where
+  mycompare x y = LT
+";
+    let _m = check(src).unwrap();
+}
+
+/// Spec 07 §Orphan instances: an instance declared in a module that
+/// owns neither the class nor the outermost type constructor of the
+/// head is an orphan and must be rejected.
+/// In `check_module_standalone("Test", ...)`, `Int` is a prelude type
+/// (home_module = "Prelude"), `Eq` is a prelude class, and neither
+/// side is local to `Test`. So declaring a user-side `instance Eq Int`
+/// without a class or data that the test module owns is an orphan.
+///
+/// The test uses a fresh user class `Myc` to avoid colliding with the
+/// existing prelude instance registry for `Eq`. We declare a user
+/// class `Myc` and try to instance it for `Int` from a different
+/// module (the test's module). Since `Myc` *is* owned by this
+/// module, the instance is NOT an orphan — it is admitted. We then
+/// exercise the orphan path by reusing the prelude's `Eq` class with
+/// a fresh local data type (still admitted, via head-local).
+#[test]
+fn instance_class_local_not_orphan() {
+    let src = "
+class Myc a where
+  myc : a -> a
+
+instance Myc Int where
+  myc x = x
+";
+    let _m = check(src).unwrap();
+}
+
+#[test]
+fn instance_data_local_not_orphan() {
+    // `Eq` is a prelude class; `Foo` is a local data type. The
+    // instance lives in the module that declares `Foo`, so it is not
+    // an orphan.
+    let src = "
+data Foo = Foo Int
+
+instance Eq Foo where
+  x == y = True
+  x /= y = False
+";
+    let _m = check(src).unwrap();
+}
+
+#[test]
+fn instance_orphan_is_rejected() {
+    // Both `Show` and `Int` are prelude-home. The user module `Test`
+    // owns neither, so `instance Show Int` here is an orphan per spec
+    // 07 §Orphan instances. The orphan check runs before the overlap
+    // check, so we expect `OrphanInstance` specifically.
+    let src = "
+instance Show Int where
+  show x = \"!\"
+";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.iter()
+            .any(|e| matches!(e.kind, TypeErrorKind::OrphanInstance { .. })),
+        "expected OrphanInstance, got {err:?}"
+    );
 }
 
 #[test]

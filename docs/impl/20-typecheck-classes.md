@@ -41,10 +41,19 @@ mis-arity は `UnknownType` / `Mismatch` として普通の unification 失
 で処理する。
 
 - super class 名は `context` から抽出し `superclasses` に入れる。
+  このとき各 superclass の引数が **class 自身の type 変数 1 つ**に
+  一致することを検査する。spec 07 §Class declarations が
+  「Superclass constraints come before the class head [...] using
+  the same `context '=>'` form」と規定するとおり、superclass context
+  は class が束縛する tvar のみを constrain できる。
+  `class Foo b => Ord a where ...` のように無関係な `b` を使うものは
+  `InvalidSuperclassContext { class, expected, got }` で reject する。
 - 各メソッド signature はそのまま `ClassInfo.methods` に入れる。
 - 加えて、prelude と同じ経路で "`class_constraint + body`" 形式
   の scheme を `TypeEnv.globals` に登録する。これにより `compare x y`
   等の呼び出しが `Ord a => ...` scheme として instantiate される。
+- `ClassInfo.home_module` に現在の module 名を記録する (orphan 検査で
+  参照)。prelude classes は `"Prelude"` を入れる。
 
 ### instance 宣言
 
@@ -54,10 +63,19 @@ mis-arity は `UnknownType` / `Mismatch` として普通の unification 失
   applied to distinct tyvars" を `ast_head_vars` で確認。
 - 重複検査: 既存 instances の head と unify できたら
   `OverlappingInstance`。
-- orphan 検査: 現行は permissive。class も type も prelude 由来
-  の組み合わせのみ弾く想定だが、M9 例題は user-land class / type
-  の組み合わせしか出さないので実際の rejection は稀。厳格化は
-  I-OQ42 周辺で再訪。
+- orphan 検査: spec 07 §Orphan instances を **strict に実装** する。
+  instance `instance C T` に対して、`C` の `home_module` あるいは
+  `T` の outermost type constructor の `home_module` のいずれかが
+  現在の module と一致するときだけ admit。どちらも別 module 由来なら
+  `OrphanInstance { class }` で reject。
+  - `ClassInfo.home_module` / `DataInfo.home_module` で追跡。Prelude
+    由来のものはどちらも `"Prelude"`。
+  - 構造的 record のように head constructor を持たない head は、class
+    が同一 module のときに限り admit。
+  - 実装は `register_instance_head` の orphan 判定パスで行う。overlap
+    check より前に走るので、"prelude に既にある instance を user module
+    で上書き" という意図のソースは OrphanInstance として弾かれる
+    (overlap まで進まない)。
 - 各 method clause は class の method scheme に「class tvar ↦
   instance head」substitution を入れて作った期待型に対して
   `check_clause_against` で検査する。

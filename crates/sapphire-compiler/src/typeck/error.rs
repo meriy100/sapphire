@@ -52,6 +52,15 @@ pub enum TypeErrorKind {
     OverlappingInstance { class: String, head: Ty },
     /// An instance head outside the Haskell-98 admitted shape.
     InvalidInstanceHead { class: String, head: Ty },
+    /// A `class Ctx => C a` superclass context that mentions a
+    /// variable other than the class's own `a`. Spec 07
+    /// §Class declarations requires the superclass to constrain the
+    /// class's own type variable.
+    InvalidSuperclassContext {
+        class: String,
+        expected: String,
+        got: String,
+    },
     /// A `do` block's final stmt is a bind or let (invalid per 07).
     InvalidDoFinalStmt,
     /// A `do` block is empty.
@@ -118,6 +127,16 @@ impl fmt::Display for TypeErrorKind {
             }
             TypeErrorKind::InvalidInstanceHead { class, head } => {
                 write!(f, "instance head `{class} {head}` outside Haskell-98 shape")
+            }
+            TypeErrorKind::InvalidSuperclassContext {
+                class,
+                expected,
+                got,
+            } => {
+                write!(
+                    f,
+                    "superclass context of `{class}` must constrain its own type variable `{expected}`, got {got}"
+                )
             }
             TypeErrorKind::InvalidDoFinalStmt => {
                 f.write_str("final `do` statement must be an expression")

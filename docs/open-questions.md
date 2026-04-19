@@ -255,6 +255,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ60 | exhaustiveness / reachability 検査 | DEFERRED-IMPL | spec 06 §Pattern matching の漏れ検査は I6 時点で未実装。codegen が "default arm" を生成するか否かと絡むので、I7 codegen 設計と合わせて決める。最低限 "多 clause 関数の最終 clause は全 pattern をカバー" の緩いチェックから始める方針。 |
 | I-OQ61 | ambiguous constraint の検出タイミング | DEFERRED-IMPL | `docs/impl/18-typecheck-hm.md` §現状の既知の緩み。generalize で一般化変数が body から消える ambiguous scheme (例: `f x = read x` 等で `Read a` を解決できないケース) を現行は wanted に残すだけ。厳密には `AmbiguousConstraint` を上げるべき。I7 codegen で dictionary を生成しようとしたときに必ず具体化が必要になるので、そのタイミングで厳格化するのが素直。 |
 | I-OQ62 | 重複パターン / minimal-complete-definition 検査 | DEFERRED-IMPL | `docs/impl/20-typecheck-classes.md` §スコープ。class instance で必須メソッド (`Eq` の `==` 等) を書き忘れた場合、現行は実装が存在しないまま register されて、use site で初めて発覚する。警告 or 静的エラーにする判断を I7 着手前に決める。 |
+| I-OQ63 | `Subst::compose` "先勝ち" の inconsistency-silencing 緩み | DEFERRED-IMPL | I6 レビュー中に発見。`s1.compose(&s2)` は既に s1 に同キー binding がある場合 s2 側を破棄するため、後続の unify が先に記録した substitution と矛盾しても silent に落ちる。`let f x = x in let y = f 1 in f "hi"` が typecheck を通るのはこの silent drop の偶然副産物。本来は inconsistent compose を fail させるか、あるいは apply 側で type equality を要求する実装に切り替える必要がある。現状、`generalize_excluding` + self-slot 除外で let-poly の正しさは独立に担保済みなので、本 OQ は independent な soundness hole として I7 codegen 着手前までに判断する。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 

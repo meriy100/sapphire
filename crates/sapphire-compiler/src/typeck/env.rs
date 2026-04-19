@@ -48,6 +48,11 @@ pub struct DataInfo {
     pub params: Vec<String>,
     /// Each constructor's name (for coverage / lookup).
     pub ctor_names: Vec<String>,
+    /// Module in which this data type was declared. Used by the
+    /// orphan-instance check (spec 07 §Orphan instances): an
+    /// `instance C T` must be declared in the same module as either
+    /// `C` or the outermost type constructor of `T`.
+    pub home_module: String,
 }
 
 /// A type-alias entry.
@@ -73,6 +78,11 @@ pub struct ClassInfo {
     /// Methods that have default implementations (just the names;
     /// the implementation body is in the AST).
     pub defaults: Vec<String>,
+    /// Module in which this class was declared. Used by the
+    /// orphan-instance check (spec 07 §Orphan instances): an
+    /// `instance C T` must be declared in the same module as either
+    /// `C` or the outermost type constructor of `T`.
+    pub home_module: String,
 }
 
 /// One instance declaration.
