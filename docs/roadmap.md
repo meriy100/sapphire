@@ -58,7 +58,7 @@ document）で集中管理する。本 roadmap は「今どこまで進んだか
 - **M5 演算子と数値 (05 Operators and numbers)** — draft 済み
   (`docs/spec/05-operators-and-numbers.md`)。Elm 風固定演算子表、単項
   マイナスは `negate` の糖衣、`Int` のみの数値タワー、`::` はリスト
-  cons として予約。01 OQ5、02 OQ2/3 は決着、01 OQ4 および 02 OQ6 は
+  cons として予約。01 OQ5、02 OQ2/3 は決着、01 OQ4 および 02 OQ4 は
   部分的に決着（残余は 05 OQ1/2、M3 に継承）。
 - **M3 パターンマッチ (06 Pattern matching)** — draft 済み
   (`docs/spec/06-pattern-matching.md`)。`case ... of`、パターン文法、

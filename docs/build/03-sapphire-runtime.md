@@ -131,7 +131,7 @@ The generated code does not strictly **need** these helpers — it
 could inline `{ tag: :Just, values: [x] }` everywhere — but
 funnelling construction through `ADT.make` lets the runtime
 evolve the representation (e.g. add a frozen-hash wrapper, or
-move to a `Struct` per 10 OQ 7) without re-running the compiler
+move to a `Struct` per 10 OQ 5) without re-running the compiler
 on every project.
 
 `Sapphire::Runtime::ADT.match` is illustrative; whether the

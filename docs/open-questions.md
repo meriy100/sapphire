@@ -69,8 +69,8 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 02-OQ1 | `True`/`False` 字句 vs prelude 構造体 | DECIDED | 09 で prelude コンストラクタ。 |
 | 02-OQ2 | 単項マイナス | DECIDED | 05 で `negate` 糖衣。 |
 | 02-OQ3 | 演算子表 固定 vs ユーザ宣言 | DECIDED | 05 で Elm 風固定。緩和は 05-OQ3 送り。 |
-| 02-OQ4 | レイアウト位置のタブ | DECIDED (要反映) | strict-by-default を維持。02 の本文から OQ を削る必要あり（13 §Interaction with earlier drafts）。 |
-| 02-OQ5 | 識別子文字集合 (ASCII vs Unicode) | DECIDED (要反映) | 最初の実装は ASCII 限定。Unicode 拡張は pure monotonic extension として後送り。 |
+| 02-OQ4 | レイアウト位置のタブ | DECIDED | strict（字句エラー）を維持。2026-04-19、02 §Layout 本文に反映し OQ を削除。 |
+| 02-OQ5 | 識別子文字集合 (ASCII vs Unicode) | DECIDED | 最初の実装は ASCII 限定。Unicode 拡張は pure monotonic extension として後送り。2026-04-19、02 §Identifiers 本文に反映し OQ を削除。 |
 | 02-OQ6 | `::` の用途 | DECIDED | 05/06 でリスト cons、パターン型注記は `(pat : type)` として決着。 |
 
 ### 03 Data types
@@ -103,7 +103,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 05-OQ3 | ユーザ宣言 fixity | DEFERRED-LATER | 必要性なし。最初の実装は Elm 風固定のまま。 |
 | 05-OQ4 | 演算子セクション | DEFERRED-LATER | 利便性のみ。 |
 | 05-OQ5 | pipe 演算子 (`\|>`/`<\|`) | DEFERRED-IMPL | 書き味が問題になれば早期追加あり得る。 |
-| 05-OQ6 | 冪乗 `^` | DECIDED (要反映) | 最初の実装に含めない（13 C）。 |
+| 05-OQ6 | 冪乗 `^` | DECIDED | 最初の実装に含めない（13 C）。2026-04-19、05 §Operator table 本文に反映し OQ を削除。 |
 
 ### 06 Pattern matching
 
@@ -135,11 +135,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| 08-OQ1 | `Maybe(..)` vs `Maybe` エクスポート既定 | DECIDED (要反映) | 「型のみ」を維持（13 C）。 |
-| 08-OQ2 | プライベート型漏洩の診断タイミング | DECIDED (要反映) | 定義時に拒絶（13 C）。 |
+| 08-OQ1 | `Maybe(..)` vs `Maybe` エクスポート既定 | DECIDED | 「型のみ」を維持（13 C）。2026-04-19、08 §Visibility の既存記述で十分であることを確認、OQ を削除して本体 OQ リストを renumber。 |
+| 08-OQ2 | プライベート型漏洩の診断タイミング | DECIDED | 定義時に拒絶（13 C）。2026-04-19、08 §Visibility に規範的な規則を追加し OQ を削除。 |
 | 08-OQ3 | 選択的再エクスポート | DEFERRED-IMPL | 実装中にユースケースで判断。 |
 | 08-OQ4 | モジュール相互再帰の脱出 | DEFERRED-LATER | Haskell の `.hs-boot` 相当。例題が要求するまで延期。 |
-| 08-OQ5 | `module Main` 糖衣 | DECIDED (要反映) | 単一ファイルスクリプトは省略可、ライブラリは必須（13 C）。 |
+| 08-OQ5 | `module Main` 糖衣 | DECIDED | 単一ファイルスクリプトは省略可、ライブラリは必須（13 C）。2026-04-19、08 §One module per file に規則を強化し OQ を削除。 |
 | 08-OQ6 | モジュールレベル fixity 宣言 | DEFERRED-LATER | 05-OQ3 連動。 |
 | 08-OQ7 | メソッド単位クラスエクスポート | DEFERRED-IMPL | 人間工学拡張。 |
 
@@ -161,9 +161,9 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| 10-OQ1 | `nil` ↔ `Nothing` 近道 | DECIDED (要反映) | 採らない（13 C）。 |
+| 10-OQ1 | `nil` ↔ `Nothing` 近道 | DECIDED | 採らない（13 C）。2026-04-19、10 §Data model ADT 節で規範的に記述し OQ を削除。 |
 | 10-OQ2 | 演算子メソッド mangle 方式 | DEFERRED-IMPL | 実装詳細。 |
-| 10-OQ3 | シンボルキー vs 文字列キー hash | DECIDED (要反映) | シンボルキー（13 C）。 |
+| 10-OQ3 | シンボルキー vs 文字列キー hash | DECIDED | シンボルキー（13 C）。2026-04-19、10 §Data model Records 節に合理性を追記し OQ を削除。 |
 | 10-OQ4 | 例外 backtrace の構造 | DEFERRED-LATER | `List String` で十分。 |
 | 10-OQ5 | `ruby_import` 外部ファイル | DEFERRED-LATER | 需要なし。 |
 | 10-OQ6 | Ruby 3.x を超えるバージョン対応 | WATCHING | 3.3 pin 維持。4.x 到来時に再訪。 |
@@ -329,11 +329,9 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 2026-04-18 の対話で 7 件の OPEN を処理し、§1〜§3 に反映済。現在
 残っている **OPEN** は無し。
 
-残る「要反映」系タスク：
-
-- 13 で決定済みだがまだ本文反映が完了していない C 項目：
-  **02-OQ4 / 02-OQ5 / 05-OQ6 / 08-OQ1 / 08-OQ2 / 08-OQ5 /
-  10-OQ1 / 10-OQ3**。いずれも小さな chore なので、別途まとめて
-  反映する予定（blocker ではない）。
+2026-04-19（S1 タスク）で、13 由来の「要反映」C 項目を全件反映
+済：**02-OQ4 / 02-OQ5 / 05-OQ6 / 08-OQ1 / 08-OQ2 / 08-OQ5 /
+10-OQ1 / 10-OQ3** は本文から OQ を削除し、該当節の規範的記述に
+畳み込んだ。Status は `DECIDED (要反映)` から `DECIDED` へ更新。
 
 新しく OPEN が発生したらここで列挙する運用。
