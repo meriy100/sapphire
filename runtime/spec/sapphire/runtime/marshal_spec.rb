@@ -99,6 +99,20 @@ RSpec.describe Sapphire::Runtime::Marshal do
       out = m.from_ruby(nested)
       expect(out).to eq(nested)
     end
+
+    it "routes a string-tag hash to the record branch, not ADT (I-OQ14)" do
+      # `{ tag: "Just", values: [1] }` is *shape-compatible* with both
+      # a Sapphire ADT and a user record. Since ADT.tagged? requires
+      # a Symbol tag, this input flows through the record branch and
+      # is frozen as-is. Documents the ambiguity that I-OQ14 will
+      # resolve once R4 introduces type-aware marshalling.
+      input = { tag: "Just", values: [1] }
+      out = m.from_ruby(input)
+      expect(out).to eq(tag: "Just", values: [1])
+      expect(out).to be_frozen
+      # Specifically NOT normalized to a :Just ADT.
+      expect(Sapphire::Runtime::ADT.tagged?(out)).to be(false)
+    end
   end
 
   describe "Ordering symbols" do
