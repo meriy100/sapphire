@@ -63,11 +63,12 @@ cd ..
 # リリース bin の build
 cargo build --release --bin sapphire
 
-# M9 例題 4 本の smoke（spec 12）
+# M9 例題 4 本の smoke（spec 12、ファイル名は spec 12 原文どおり）
 ./target/release/sapphire run examples/sources/01-hello-ruby/Main.sp
-./target/release/sapphire run examples/sources/02-parse-numbers/Main.sp
-./target/release/sapphire run examples/sources/03-students-records/Main.sp
-./target/release/sapphire run examples/sources/04-fetch-summarise/Main.sp
+./target/release/sapphire run examples/sources/02-parse-numbers/NumberSum.sp
+./target/release/sapphire run examples/sources/03-students-records/Students.sp
+# 04 は Http.sp + Fetch.sp の 2 モジュール、entry は Fetch.sp
+./target/release/sapphire run examples/sources/04-fetch-summarise/Fetch.sp
 ```
 
 `runtime/` の Ruby テストは `runtime/` 配下で `bundle exec rspec`

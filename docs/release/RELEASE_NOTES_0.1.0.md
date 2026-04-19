@@ -55,11 +55,12 @@ cd ..
 # 3. コンパイラをビルド（Rust 1.85.0+ 必須、rust-toolchain.toml で pin 済み）
 cargo build --release --bin sapphire
 
-# 4. M9 例題を動かす
+# 4. M9 例題を動かす（実ファイル名は spec 12 準拠）
 ./target/release/sapphire run examples/sources/01-hello-ruby/Main.sp
-./target/release/sapphire run examples/sources/02-parse-numbers/Main.sp
-./target/release/sapphire run examples/sources/03-students-records/Main.sp
-./target/release/sapphire run examples/sources/04-fetch-summarise/Main.sp
+./target/release/sapphire run examples/sources/02-parse-numbers/NumberSum.sp
+./target/release/sapphire run examples/sources/03-students-records/Students.sp
+# 04 は Http.sp + Fetch.sp の 2 モジュール構成。run は entry module 指定：
+./target/release/sapphire run examples/sources/04-fetch-summarise/Fetch.sp
 ```
 
 GitHub Release に attach された `sapphire-<target>-0.1.0.tar.gz`
