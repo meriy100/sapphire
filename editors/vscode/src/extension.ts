@@ -1,12 +1,18 @@
-// Sapphire VSCode extension (L1 scaffold).
+// Sapphire VSCode extension.
 //
-// Spawns the `sapphire-lsp` binary as a child process and talks LSP
-// to it over stdio. The server binary is resolved from
-// `SAPPHIRE_LSP_PATH` if set, otherwise the plain `sapphire-lsp`
-// name (which requires the binary on $PATH).
+// Launches the `sapphire-lsp` binary as a child process and talks LSP
+// to it over stdio.
 //
-// Later milestones (L2+) will add client-side configuration, status
-// bar items, commands, etc. This file intentionally stays small.
+// Binary resolution (highest priority first):
+//   1. `SAPPHIRE_LSP_PATH` environment variable.
+//   2. `sapphire.lsp.path` workspace/user setting.
+//   3. `sapphire-lsp` resolved from $PATH.
+//
+// Log level is derived the same way from `SAPPHIRE_LSP_LOG` /
+// `sapphire.lsp.log`, and `sapphire.trace.server` controls LSP JSON
+// message tracing on the client side.
+//
+// See docs/impl/23-vscode-extension-polish.md for the design notes.
 
 import * as vscode from "vscode";
 import {
@@ -18,13 +24,47 @@ import {
 
 let client: LanguageClient | undefined;
 
-export function activate(context: vscode.ExtensionContext): void {
-  const serverPath = process.env.SAPPHIRE_LSP_PATH ?? "sapphire-lsp";
+const CONFIG_SECTION = "sapphire";
 
-  const serverOptions: ServerOptions = {
-    run: { command: serverPath, transport: TransportKind.stdio },
-    debug: { command: serverPath, transport: TransportKind.stdio },
+function resolveServerPath(config: vscode.WorkspaceConfiguration): string {
+  const envPath = process.env.SAPPHIRE_LSP_PATH;
+  if (envPath && envPath.length > 0) {
+    return envPath;
+  }
+  const configured = config.get<string>("lsp.path", "").trim();
+  if (configured.length > 0) {
+    return configured;
+  }
+  return "sapphire-lsp";
+}
+
+function resolveLogLevel(config: vscode.WorkspaceConfiguration): string {
+  const envLog = process.env.SAPPHIRE_LSP_LOG;
+  if (envLog && envLog.length > 0) {
+    return envLog;
+  }
+  return config.get<string>("lsp.log", "info");
+}
+
+function buildServerOptions(
+  config: vscode.WorkspaceConfiguration,
+): ServerOptions {
+  const serverPath = resolveServerPath(config);
+  const logLevel = resolveLogLevel(config);
+  const env = {
+    ...process.env,
+    SAPPHIRE_LSP_LOG: logLevel,
   };
+  const runDebug = {
+    command: serverPath,
+    transport: TransportKind.stdio,
+    options: { env },
+  };
+  return { run: runDebug, debug: runDebug };
+}
+
+export function activate(context: vscode.ExtensionContext): void {
+  const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
 
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "sapphire" }],
@@ -34,13 +74,35 @@ export function activate(context: vscode.ExtensionContext): void {
   client = new LanguageClient(
     "sapphire",
     "Sapphire Language Server",
-    serverOptions,
+    buildServerOptions(config),
     clientOptions,
+  );
+
+  // React to configuration changes by asking the user to reload. The
+  // server binary path, log level, and trace setting are all resolved
+  // at client construction time, so they require a full reload to
+  // take effect.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration(CONFIG_SECTION)) {
+        return;
+      }
+      const reload = "Reload Window";
+      void vscode.window
+        .showInformationMessage(
+          "Sapphire settings changed. Reload the window for them to take effect.",
+          reload,
+        )
+        .then((choice) => {
+          if (choice === reload) {
+            void vscode.commands.executeCommand("workbench.action.reloadWindow");
+          }
+        });
+    }),
   );
 
   context.subscriptions.push({
     dispose: () => {
-      // Ensure the client is stopped when the extension is disposed.
       if (client) {
         void client.stop();
       }

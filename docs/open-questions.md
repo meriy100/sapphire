@@ -252,6 +252,10 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ67 | LineMap の部分更新 | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §LineMap の差分更新を punt する理由。L3 現状は `apply_change` ごとに `LineMap::new` を呼び直す。巨大ファイル / 高頻度編集で hot path になるなら、`line_starts` を slice で継ぎ合わせる incremental 版に差し替える。`line-index` / `ropey` 採用（I-OQ53）と連動して決める。 |
 | I-OQ68 | `rangeLength` の取り扱い | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §range_length を無視する判断。LSP 3.17 で deprecated、実装ごとに UTF-16 / byte 計算が割れているため L3 では完全に無視。将来、client 側 UTF-16 算出壊れを log で可視化したい要望が出れば、`range` との不一致時に WARN を出す方向で再検討。 |
 | I-OQ69 | client 再送 (resync) プロトコル | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §エラー処理。`apply_change` が失敗して buffer が drift したとき、`workspace/diagnostic/refresh` / 明示的な `textDocument/didOpen` 再送で client に full 再送を促すフック。LSP 3.17 既存メカニズムで賄えるかの調査を含め、resync が必要になった段で決める。 |
+| I-OQ76 | TextMate grammar の射程とネストブロックコメント | DEFERRED-IMPL | `docs/impl/23-vscode-extension-polish.md` §既知の近似。`syntaxes/sapphire.tmLanguage.json` はブロックコメント nesting を 1 段までしか追えない（TextMate の線形 regex 制約）。tree-sitter 化 or LSP semantic tokens への昇格を I6 着地後に検討。 |
+| I-OQ77 | Language configuration の indentationRules 精度 | DEFERRED-IMPL | `docs/impl/23-vscode-extension-polish.md` §既知の近似。`language-configuration.json` の `indentationRules` は spec 02 §Layout を正規表現で近似するのみ。深い入れ子では破綻しうる。代替は LSP formatting provider / semantic indent hint（L7 以降）。 |
+| I-OQ78 | VSCode 拡張の marketplace 公開と publisher 名 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/23-vscode-extension-polish.md` §将来の拡張。`package.json` の `publisher: "meriy100"` は placeholder、`icon` も未設定。初回 release（D3）で user に最終確認。 |
+| I-OQ79 | 拡張の設定変更反映ポリシー | DEFERRED-IMPL | `docs/impl/23-vscode-extension-polish.md` §設定変更時の反映。現状は reload window 提案のみ。環境変数切り替えで頻繁に server バイナリを切り替える運用が主流になれば `client.restart()` ベースの動的化を検討。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -384,5 +388,10 @@ OPEN として追加。user 判断待ち。
 LSP incremental sync 導入に伴い **I-OQ67〜I-OQ69** を §1.5 に
 追加。いずれも `DEFERRED-IMPL`。真の incremental parsing は引き
 続き I-OQ9 で punt。
+
+2026-04-19（L7 タスク、`docs/impl/23-vscode-extension-polish.md`）で、
+VSCode 拡張の syntax / snippets / configuration 整備に伴い
+**I-OQ76〜I-OQ79** を §1.5 に追加。I-OQ78 は D3 前に、ほか 3 件は
+`DEFERRED-IMPL`。
 
 新しく OPEN が発生したらここで列挙する運用。

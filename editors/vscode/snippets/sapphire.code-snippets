@@ -1,0 +1,109 @@
+{
+  "module header": {
+    "prefix": "module",
+    "description": "Module header with explicit export list (spec 08).",
+    "body": [
+      "module ${1:Name}",
+      "  ( ${2:exports} )",
+      "  where",
+      "",
+      "$0"
+    ]
+  },
+  "main action (Ruby monad)": {
+    "prefix": "main",
+    "description": "Main entry point returning Ruby {} (spec 11 / M9 Example 1).",
+    "body": [
+      "main : Ruby {}",
+      "main = do",
+      "  $0"
+    ]
+  },
+  "data declaration": {
+    "prefix": "data",
+    "description": "Algebraic data type declaration (spec 03).",
+    "body": [
+      "data ${1:T} ${2:a}",
+      "  = ${3:Ctor} ${4:arg}",
+      "  | ${5:Other}$0"
+    ]
+  },
+  "type alias": {
+    "prefix": "type",
+    "description": "Transparent type alias (spec 09 §Type aliases).",
+    "body": [
+      "type ${1:Name} = ${2:Type}$0"
+    ]
+  },
+  "case expression": {
+    "prefix": "case",
+    "description": "Pattern-matching case expression (spec 06).",
+    "body": [
+      "case ${1:expr} of",
+      "  ${2:pat} -> ${3:body}",
+      "  _ -> ${4:default}$0"
+    ]
+  },
+  "let binding": {
+    "prefix": "let",
+    "description": "Local let/in binding (spec 01).",
+    "body": [
+      "let ${1:name} = ${2:value} in ${3:body}$0"
+    ]
+  },
+  "if expression": {
+    "prefix": "if",
+    "description": "if/then/else expression (spec 01, desugared in spec 09).",
+    "body": [
+      "if ${1:cond} then ${2:then_branch} else ${3:else_branch}$0"
+    ]
+  },
+  "do block": {
+    "prefix": "do",
+    "description": "Monadic do-notation block (spec 07).",
+    "body": [
+      "do",
+      "  ${1:x} <- ${2:action}",
+      "  $0"
+    ]
+  },
+  "class declaration": {
+    "prefix": "class",
+    "description": "Type-class declaration (spec 07).",
+    "body": [
+      "class ${1:Eq} ${2:a} where",
+      "  ${3:method} : ${4:Type}$0"
+    ]
+  },
+  "instance declaration": {
+    "prefix": "instance",
+    "description": "Type-class instance declaration (spec 07).",
+    "body": [
+      "instance ${1:Eq} ${2:T} where",
+      "  ${3:method} = ${4:body}$0"
+    ]
+  },
+  "Ruby embedding (:=)": {
+    "prefix": "ruby",
+    "description": "Ruby-embedding binding with triple-quoted body (spec 10).",
+    "body": [
+      "${1:name} ${2:arg} := \"\"\"",
+      "  $0",
+      "\"\"\""
+    ]
+  },
+  "record literal": {
+    "prefix": "record",
+    "description": "Record literal (spec 04).",
+    "body": [
+      "{ ${1:field} = ${2:value} }$0"
+    ]
+  },
+  "record update": {
+    "prefix": "update",
+    "description": "Record update expression (spec 04).",
+    "body": [
+      "{ ${1:r} | ${2:field} = ${3:value} }$0"
+    ]
+  }
+}
