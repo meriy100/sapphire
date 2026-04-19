@@ -202,10 +202,12 @@ enum TokenKind {
     UpperIdent(String),
     Underscore,
 
-    // Keywords
-    Module, Import, Exposing, Hiding, As,
+    // Keywords (spec 02 §Keywords の全 20 語)。
+    // `forall` / `qualified` / `export` は現段階の production には
+    // 登場しないが、予約語不変条件を守るため TokenKind に並べる。
+    Module, Import, Hiding, As, Qualified, Export,
     Data, Type, Class, Instance, Where,
-    Let, In, If, Then, Else, Case, Of, Do,
+    Let, In, If, Then, Else, Case, Of, Do, Forall,
 
     // Literals
     Int(i64),
