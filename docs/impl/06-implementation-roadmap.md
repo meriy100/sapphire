@@ -161,33 +161,38 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 3 | `impl/l2-diagnostics` | **L2** parse-error diagnostics 🟢 |
 | 4 | `impl/t2c-tutorial-advanced` | **T2c** tutorial 発展篇（HKT 隔離章） 🟢 |
 
-### ウェーブ 5（I5/L2 着地後）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 5（I5/L2 着地後）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i6-typecheck` | **I6a** HM → **I6b** ADT/Record → **I6c** Type classes 🟡 |
-| 2 | `impl/l3-sync` | **L3** document sync（incremental 対応の基礎） 🟡 |
+| 1 | `impl/i6-typecheck` | **I6a** HM → **I6b** ADT/Record → **I6c** Type classes 🟢 |
+| 2 | `impl/l3-sync` | **L3** document sync（incremental 対応の基礎） 🟢 |
 
-### ウェーブ 6（I6 着地後）⬜ **未着手**
+### ウェーブ 5.5（機会先取りで並走させた polish）🟢 **完了（2026-04-19）**
 
-| # | タスク |
-|---|---|
-| 1 | **I7** codegen → **I8** CLI |
-| 2 | **L4** hover / **L5** goto-def |
-| 3 | **D2** CI cross-compile |
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/l5-goto-def` | **L5** `textDocument/definition` 🟢 |
+| 2 | `impl/l7-vscode-polish` | **L7** VSCode extension 拡充 🟢 |
+| 3 | `impl/rp-runtime-polish` | **RP** R4/R5 reviewer suggestion 束ね適用 🟢 |
 
-（以前の「ウェーブ 6」に相当。ウェーブ 5 を I6/L3 に割り当てた
-ため 1 段後ろへずれた。）
+### ウェーブ 6（I6 着地後）🟡 **進行中（2026-04-19〜）**
 
-### ウェーブ 7（I7 + R6 着地後、統合）
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i7-i8-codegen-cli` | **I7** codegen（式→Ruby / ADT / 作用モナド）→ **I8** CLI 🟡 |
+| 2 | `impl/l4-hover` | **L4** hover（型情報） 🟡 |
+| 3 | `impl/d2-ci-cross` | **D2** CI cross-compile matrix 🟡 |
+
+### ウェーブ 7（I7 + R6 着地後、統合）⬜ **未着手**
 
 | # | タスク |
 |---|---|
 | 1 | **I9** M9 end-to-end |
-| 2 | **L6** completion + **L7** VSCode extension |
+| 2 | **L6** completion |
 | 3 | **D3** 初回リリース |
 
-（T2c はウェーブ 4 で先行着地済。）
+（L5 / L7 / T2c は先行着地済。）
 
 ## 進捗トラッキング
 
