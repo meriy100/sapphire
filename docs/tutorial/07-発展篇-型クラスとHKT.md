@@ -337,7 +337,7 @@ Applicative => Monad`) までを素直に取り込んだ、と思ってもらっ
 ミング手法としての奥行きは相当なものです。`Functor` / `Applicative`
 / `Monad` の法則と、それが日常のコードを等価変形で読みやすくする
 仕組みは、Haskell 向けの教材で同じ概念が厚く扱われています。
-`Reader` / `State` / `Writer` のような古典的な「作用モナド」群、
+`Reader` / `State` / `Writer` のような副作用を担うモナド群、
 モナド変換子 (monad transformers)、`traverse` / `sequence` と
 いった Applicative 由来の道具立て — いずれも Sapphire の現状
 スコープの外ですが、同じ道具立てでプログラムが組めることを知って
