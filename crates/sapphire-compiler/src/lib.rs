@@ -12,6 +12,8 @@
 //! - [`parser`] — hand-written recursive descent + Pratt operator
 //!   parsing, producing an AST from `sapphire_core::ast`.
 //!   Rationale in `docs/impl/13-parser.md`.
+//! - [`resolver`] — name and module resolution (spec 08).
+//!   Rationale in `docs/impl/15-resolver.md`.
 //!
 //! The AST itself lives in [`sapphire_core::ast`] so that the LSP
 //! crate can share it with the compiler without depending on the
@@ -20,3 +22,4 @@
 pub mod layout;
 pub mod lexer;
 pub mod parser;
+pub mod resolver;

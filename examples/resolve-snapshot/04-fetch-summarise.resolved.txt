@@ -1,0 +1,232 @@
+ResolvedProgram (2 modules)
+
+== module Fetch ==
+  top-level:
+    priv value  explain  [value]
+    pub  value  main  [value]
+    priv value  rubyPuts  [value]
+    priv value  stringLength  [value]
+  exports:
+    value main  -> Fetch.main
+  unqualified-scope:
+    value %  <- Prelude.%
+    value &&  <- Prelude.&&
+    value *  <- Prelude.*
+    value +  <- Prelude.+
+    value ++  <- Prelude.++
+    value -  <- Prelude.-
+    value /  <- Prelude./
+    value /=  <- Prelude./=
+    value ::  <- Prelude.::
+    value <  <- Prelude.<
+    value <=  <- Prelude.<=
+    value ==  <- Prelude.==
+    value >  <- Prelude.>
+    value >=  <- Prelude.>=
+    value >>  <- Prelude.>>
+    value >>=  <- Prelude.>>=
+    type Applicative  <- Prelude.Applicative
+    type Bool  <- Prelude.Bool
+    value Cons  <- Prelude.Cons
+    value DecodeError  <- Http.DecodeError
+    value EQ  <- Prelude.EQ
+    type Eq  <- Prelude.Eq
+    value Err  <- Prelude.Err
+    value False  <- Prelude.False
+    type Functor  <- Prelude.Functor
+    value GT  <- Prelude.GT
+    type HttpError  <- Http.HttpError
+    type Int  <- Prelude.Int
+    value Just  <- Prelude.Just
+    value LT  <- Prelude.LT
+    type List  <- Prelude.List
+    type Maybe  <- Prelude.Maybe
+    type Monad  <- Prelude.Monad
+    value NetworkError  <- Http.NetworkError
+    value Nil  <- Prelude.Nil
+    value Nothing  <- Prelude.Nothing
+    value Ok  <- Prelude.Ok
+    type Ord  <- Prelude.Ord
+    type Ordering  <- Prelude.Ordering
+    type Result  <- Prelude.Result
+    type Ruby  <- Prelude.Ruby
+    type Show  <- Prelude.Show
+    value StatusError  <- Http.StatusError
+    type String  <- Prelude.String
+    value True  <- Prelude.True
+    value compare  <- Prelude.compare
+    value compose  <- Prelude.compose
+    value concat  <- Prelude.concat
+    value concatMap  <- Prelude.concatMap
+    value const  <- Prelude.const
+    value filter  <- Prelude.filter
+    value flip  <- Prelude.flip
+    value foldl  <- Prelude.foldl
+    value foldr  <- Prelude.foldr
+    value fromMaybe  <- Prelude.fromMaybe
+    value fst  <- Prelude.fst
+    value get  <- Http.get
+    value get  <- Http.get
+    value head  <- Prelude.head
+    value id  <- Prelude.id
+    value join  <- Prelude.join
+    value length  <- Prelude.length
+    value map  <- Prelude.map
+    value mapErr  <- Prelude.mapErr
+    value maybe  <- Prelude.maybe
+    value negate  <- Prelude.negate
+    value not  <- Prelude.not
+    value null  <- Prelude.null
+    value print  <- Prelude.print
+    value pure  <- Prelude.pure
+    value readInt  <- Prelude.readInt
+    value result  <- Prelude.result
+    value return  <- Prelude.return
+    value show  <- Prelude.show
+    value snd  <- Prelude.snd
+    value tail  <- Prelude.tail
+    value unless  <- Prelude.unless
+    value when  <- Prelude.when
+    value ||  <- Prelude.||
+  qualifiers:
+    Fetch  -> Fetch
+    Http  -> Http
+    Prelude  -> Prelude
+  references:
+    74..78  global Prelude.Ruby [type]
+    101..104  global Http.get [value]
+    135..138  local  res
+    146..153  global Prelude.Ok [value]
+    171..183  global Fetch.stringLength [value]
+    184..188  local  body
+    195..203  global Fetch.rubyPuts [value]
+    205..237  global Prelude.++ [value]
+    219..223  global Prelude.show [value]
+    219..237  global Prelude.++ [value]
+    224..225  local  n
+    243..254  global Prelude.Err [value]
+    258..266  global Fetch.rubyPuts [value]
+    268..275  global Fetch.explain [value]
+    276..283  local  httpErr
+    296..305  global Http.HttpError [type]
+    309..315  global Prelude.String [type]
+    335..338  local  err
+    344..358  global Http.NetworkError [value]
+    366..388  global Prelude.++ [value]
+    387..388  local  m
+    391..409  global Http.StatusError [value]
+    413..445  global Prelude.++ [value]
+    424..428  global Prelude.show [value]
+    424..445  global Prelude.++ [value]
+    429..430  local  c
+    434..445  global Prelude.++ [value]
+    442..445  local  msg
+    448..462  global Http.DecodeError [value]
+    470..491  global Prelude.++ [value]
+    490..491  local  m
+    648..654  global Prelude.String [type]
+    658..662  global Prelude.Ruby [type]
+    663..666  global Prelude.Int [type]
+    718..724  global Prelude.String [type]
+    728..732  global Prelude.Ruby [type]
+
+== module Http ==
+  top-level:
+    pub  value  DecodeError  [ctor]
+    pub  type   HttpError  [data]
+    pub  value  NetworkError  [ctor]
+    pub  value  StatusError  [ctor]
+    pub  value  get  [value]
+  exports:
+    value DecodeError  -> Http.DecodeError
+    value NetworkError  -> Http.NetworkError
+    value StatusError  -> Http.StatusError
+    value get  -> Http.get
+    type  HttpError  -> Http.HttpError
+  unqualified-scope:
+    value %  <- Prelude.%
+    value &&  <- Prelude.&&
+    value *  <- Prelude.*
+    value +  <- Prelude.+
+    value ++  <- Prelude.++
+    value -  <- Prelude.-
+    value /  <- Prelude./
+    value /=  <- Prelude./=
+    value ::  <- Prelude.::
+    value <  <- Prelude.<
+    value <=  <- Prelude.<=
+    value ==  <- Prelude.==
+    value >  <- Prelude.>
+    value >=  <- Prelude.>=
+    value >>  <- Prelude.>>
+    value >>=  <- Prelude.>>=
+    type Applicative  <- Prelude.Applicative
+    type Bool  <- Prelude.Bool
+    value Cons  <- Prelude.Cons
+    value EQ  <- Prelude.EQ
+    type Eq  <- Prelude.Eq
+    value Err  <- Prelude.Err
+    value False  <- Prelude.False
+    type Functor  <- Prelude.Functor
+    value GT  <- Prelude.GT
+    type Int  <- Prelude.Int
+    value Just  <- Prelude.Just
+    value LT  <- Prelude.LT
+    type List  <- Prelude.List
+    type Maybe  <- Prelude.Maybe
+    type Monad  <- Prelude.Monad
+    value Nil  <- Prelude.Nil
+    value Nothing  <- Prelude.Nothing
+    value Ok  <- Prelude.Ok
+    type Ord  <- Prelude.Ord
+    type Ordering  <- Prelude.Ordering
+    type Result  <- Prelude.Result
+    type Ruby  <- Prelude.Ruby
+    type Show  <- Prelude.Show
+    type String  <- Prelude.String
+    value True  <- Prelude.True
+    value compare  <- Prelude.compare
+    value compose  <- Prelude.compose
+    value concat  <- Prelude.concat
+    value concatMap  <- Prelude.concatMap
+    value const  <- Prelude.const
+    value filter  <- Prelude.filter
+    value flip  <- Prelude.flip
+    value foldl  <- Prelude.foldl
+    value foldr  <- Prelude.foldr
+    value fromMaybe  <- Prelude.fromMaybe
+    value fst  <- Prelude.fst
+    value head  <- Prelude.head
+    value id  <- Prelude.id
+    value join  <- Prelude.join
+    value length  <- Prelude.length
+    value map  <- Prelude.map
+    value mapErr  <- Prelude.mapErr
+    value maybe  <- Prelude.maybe
+    value negate  <- Prelude.negate
+    value not  <- Prelude.not
+    value null  <- Prelude.null
+    value print  <- Prelude.print
+    value pure  <- Prelude.pure
+    value readInt  <- Prelude.readInt
+    value result  <- Prelude.result
+    value return  <- Prelude.return
+    value show  <- Prelude.show
+    value snd  <- Prelude.snd
+    value tail  <- Prelude.tail
+    value unless  <- Prelude.unless
+    value when  <- Prelude.when
+    value ||  <- Prelude.||
+  qualifiers:
+    Http  -> Http
+    Prelude  -> Prelude
+  references:
+    78..84  global Prelude.String [type]
+    102..105  global Prelude.Int [type]
+    106..112  global Prelude.String [type]
+    130..136  global Prelude.String [type]
+    218..224  global Prelude.String [type]
+    228..232  global Prelude.Ruby [type]
+    234..240  global Prelude.Result [type]
+    241..250  global Http.HttpError [type]
+    251..257  global Prelude.String [type]
