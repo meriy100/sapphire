@@ -217,7 +217,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ6 | `lsp-types` のバージョン pin | DECIDED | `tower-lsp` が引き込む版（現行 0.94.x）に追随し、workspace 側で明示 pin しない。2026-04-19 L1 着手時に決定。`07-lsp-stack.md` / `10-lsp-scaffold.md` 参照。 |
 | I-OQ7 | `tower-lsp` 本家 vs fork | DECIDED | 本家 0.20.x を採用。L1 スコープ（initialize / shutdown / textDocument sync）で不足はない。fork への切替は、L2 以降で本家未対応の capability が必要になった時点で再評価。2026-04-19 L1 着手時に決定。`07-lsp-stack.md` / `10-lsp-scaffold.md` 参照。 |
 | I-OQ8 | ロギング基盤 | DEFERRED-IMPL | `tracing` 推奨（コンパイラ本体 I2 と揃える）。代替は `log` + `env_logger`。I2 で確定。`07-lsp-stack.md` 参照。 |
-| I-OQ9 | LSP のインクリメンタル計算基盤 | DEFERRED-IMPL | L3 は naive 再解析で開始。将来 Salsa 等を導入する段階で同期モデル（`lsp-server`）への乗せ替えも含め再評価。`07-lsp-stack.md` 参照。 |
+| I-OQ9 | LSP のインクリメンタル計算基盤 | DEFERRED-IMPL | L3（`docs/impl/21-lsp-incremental-sync.md`）で **text sync のみ incremental** 化し、reparse は naive 全再走のまま。Salsa 等の導入・AST 再利用・`lsp-server` への乗せ替え判断は引き続き先送り。L4/L5 で AST キャッシュを足す段か、M9 例題で性能問題が観測された段に再訪。`07-lsp-stack.md` / `21-lsp-incremental-sync.md` 参照。 |
 | I-OQ10 | LSP の transport 抽象 | DEFERRED-LATER | 初回は stdin/stdout のみ。TCP / pipe は VSCode 以外のエディタ対応時（本フェーズ外）に再検討。`07-lsp-stack.md` 参照。 |
 | I-OQ11 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
 | I-OQ12 | `sapphire-runtime` 側 Ruby formatter / linter 採否 | DEFERRED-IMPL | R1 では rubocop / standard-ruby を導入せず scaffold を最小化。`docs/impl/08-runtime-layout.md` §Rubocop / formatter。R2（ADT 実装）着地時に再評価。 |
@@ -249,6 +249,9 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ54 | LSP diagnostic の `relatedInformation` 設計 | DEFERRED-IMPL | `docs/impl/17-lsp-diagnostics.md` §今後の拡張。lex / layout / parse の単発エラーには `relatedInformation` を付けていない。unification clash など型検査由来の双方向エラー（I6）で "こちら側と矛盾している" を指したくなるので、I6 結合時に `related_information` を埋める方針を決める。 |
 | I-OQ55 | LSP `positionEncoding` negotiation | DEFERRED-LATER | `docs/impl/17-lsp-diagnostics.md` §今後の拡張。LSP 3.17 は UTF-8 / UTF-16 / UTF-32 のネゴを許す。Sapphire は spec 02 で UTF-8 を内部表現としているので、サーバが UTF-8 を宣言すればエディタ側対応次第で変換レイヤが消える。ただし VSCode のデフォルトは UTF-16 継続なので、対応クライアントが増えた時点で再評価。 |
 | I-OQ56 | LSP ドキュメントストアの TTL / memory budget | DEFERRED-IMPL | `docs/impl/17-lsp-diagnostics.md` §今後の拡張。L2 時点の `DashMap<Url, Document>` は `did_close` で `remove` しているため通常ファイルサイズ以上には膨らまないが、将来 AST / resolver / type info を document ごとにキャッシュするようになったときメモリ管理方針（LRU vs 明示破棄）を決める。 |
+| I-OQ67 | LineMap の部分更新 | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §LineMap の差分更新を punt する理由。L3 現状は `apply_change` ごとに `LineMap::new` を呼び直す。巨大ファイル / 高頻度編集で hot path になるなら、`line_starts` を slice で継ぎ合わせる incremental 版に差し替える。`line-index` / `ropey` 採用（I-OQ53）と連動して決める。 |
+| I-OQ68 | `rangeLength` の取り扱い | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §range_length を無視する判断。LSP 3.17 で deprecated、実装ごとに UTF-16 / byte 計算が割れているため L3 では完全に無視。将来、client 側 UTF-16 算出壊れを log で可視化したい要望が出れば、`range` との不一致時に WARN を出す方向で再検討。 |
+| I-OQ69 | client 再送 (resync) プロトコル | DEFERRED-IMPL | `docs/impl/21-lsp-incremental-sync.md` §エラー処理。`apply_change` が失敗して buffer が drift したとき、`workspace/diagnostic/refresh` / 明示的な `textDocument/didOpen` 再送で client に full 再送を促すフック。LSP 3.17 既存メカニズムで賄えるかの調査を含め、resync が必要になった段で決める。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -376,5 +379,10 @@ OPEN として追加。user 判断待ち。
 由来の **I-OQ29〜I-OQ33** を §1.5 に追加。いずれも `DEFERRED-IMPL`
 で、D2（CI cross build）および D3（初回 release）の中で user 判断
 を仰ぐ位置付け。現時点では OPEN ではない。
+
+2026-04-19（L3 タスク、`docs/impl/21-lsp-incremental-sync.md`）で、
+LSP incremental sync 導入に伴い **I-OQ67〜I-OQ69** を §1.5 に
+追加。いずれも `DEFERRED-IMPL`。真の incremental parsing は引き
+続き I-OQ9 で punt。
 
 新しく OPEN が発生したらここで列挙する運用。
