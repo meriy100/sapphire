@@ -1,0 +1,25 @@
+   0..0    Indent(0)
+   0..6    Module
+   7..12   UpperIdent(Hello)
+  13..21   Exposing
+  22..23   LParen
+  23..28   LowerIdent(greet)
+  28..29   RParen
+  29..30   Newline
+  30..31   Newline
+  31..31   Indent(0)
+  31..36   LowerIdent(greet)
+  37..38   Colon
+  39..45   UpperIdent(String)
+  46..48   Arrow
+  49..55   UpperIdent(String)
+  55..56   Newline
+  56..56   Indent(0)
+  56..61   LowerIdent(greet)
+  62..66   LowerIdent(name)
+  67..68   Equals
+  69..78   Str("Hello, ")
+  79..81   PlusPlus
+  82..86   LowerIdent(name)
+  86..87   Newline
+  87..87   Eof

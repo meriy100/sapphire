@@ -1,8 +1,9 @@
 //! The Sapphire compiler.
 //!
-//! This crate will host the lexer, parser, name resolver, type
-//! checker, and code generator. At the scaffolding stage (I2) it is
-//! intentionally empty; real modules land starting with I3 (lexer).
+//! This crate hosts the lexer and (in later milestones) the parser,
+//! name resolver, type checker, and code generator. The lexer is the
+//! first real module and lives under [`lexer`]; see
+//! `docs/spec/02-lexical-syntax.md` for the normative specification
+//! and `docs/impl/09-lexer.md` for the implementation rationale.
 
-/// Placeholder to keep the crate compiling before real code lands.
-pub fn placeholder() {}
+pub mod lexer;
