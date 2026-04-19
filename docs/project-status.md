@@ -13,39 +13,52 @@ from plain Ruby. A signature feature is a `RubyEval`-style monad that
 runs embedded Ruby snippets on a separate thread and threads the result
 back into the pure pipeline.
 
-At the time of writing there is **no substantive source code in this
-repository**. A previous Rust-based lexer / parser / codegen existed but
-was wiped in the "refresh" commit; every implementation decision is
-open.
+At the time this document was first written there was **no substantive
+source code in this repository**. That is still true as of the
+phase-transition day (2026-04-19); scaffolding begins next.
 
-## Current phase: language specification
+## Current phase: implementation (from 2026-04-19)
 
-The chosen order is **spec first, implementation language second.**
-Work on the language spec until its shape is substantially settled,
-then pick the implementation language based on what the spec actually
-requires.
+The spec-first phase concluded on 2026-04-19 with two milestones
+landing:
 
-In scope during this phase:
+- **M10** — spec-freeze review (`docs/spec/13-spec-freeze-review.md`),
+  which audited open questions across 01–12 and consolidated them
+  into `docs/open-questions.md`.
+- **I1** — host-language selection (`docs/impl/05-decision.md`),
+  which chose **Rust** as the language in which Sapphire's compiler
+  will be written.
 
-- Lexical syntax (keywords, literals, operators, layout rules).
-- Type system (type variables, records, ADTs, type classes or not, row
-  polymorphism or not, etc.).
-- Module / import / visibility story.
-- Ruby interop model: how `.sp` programs express embedded Ruby, how
-  results are modeled, the async / monad semantics, error shapes, how
-  the generated Ruby module is shaped and named.
-- Motivating example programs in the proposed syntax.
-- Open questions and tradeoffs for the user to decide.
+The project is now in the **implementation phase**. In scope during
+this phase:
 
-When the spec has enough shape (roughly: core syntax, core type system,
-and the Ruby interop / monad story are all answered), phase ordering
-will be revisited with the user.
+- Scaffolding the Rust compiler project (`Cargo.toml`, `src/`, CI).
+- Implementing lexer, parser, AST, type checker, code generator in
+  stages aligned with the spec documents.
+- Building `sapphire-runtime` — the Ruby-side support gem that
+  generated code depends on (per `docs/build/03-sapphire-runtime.md`).
+- Tutorial maintenance (T2 pedagogy revision track) alongside
+  implementation feedback.
+- Closing open questions under `docs/open-questions.md` as
+  implementation work reveals answers.
 
-Progress is tracked as numbered documents under `docs/spec/`
-(`01-core-expressions.md` is the first of these). The planned
-sequence of documents and their dependencies — including the
-milestone that finalizes the name of the `RubyEval`-style monad —
-is laid out in `docs/roadmap.md`.
+This phase ends when Sapphire has a first usable compiler + runtime
+that can run the M9 example programs end-to-end. Subsequent phases
+(self-host exploration, broader stdlib, ecosystem) will be scoped
+separately.
+
+### Historical record: the spec-first phase (concluded)
+
+Between the project's start and 2026-04-19, the chosen order was
+**spec first, implementation language second.** Twelve spec drafts
+(01–12) plus the freeze review (13) were produced under that
+discipline; the tutorial (T1) and build-strategy (B1) parallel
+tracks filled in supporting material. Host-language neutrality was
+maintained in `docs/spec/` throughout. The decision to end this
+phase and select Rust is recorded in `docs/impl/05-decision.md`.
+
+Progress tracking continues via `docs/roadmap.md` (living
+milestones) and `docs/open-questions.md` (living OQ index).
 
 ## Runtime environment
 

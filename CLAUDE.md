@@ -4,25 +4,40 @@ Rules for Claude when operating in this repository. For background
 (what Sapphire is, what phase the project is in, how the devcontainer
 and GitHub access are set up), see `docs/project-status.md`.
 
-## Phase-conditioned rules (spec-first phase)
+## Phase-conditioned rules (implementation phase, from 2026-04-19)
 
-These rules are in force while the project is in the spec-first phase
-described in `docs/project-status.md`. When that phase ends, revisit
-this section with the user.
+The spec-first phase concluded with M10 (`docs/spec/13-spec-freeze-
+review.md`) and I1 (`docs/impl/05-decision.md`). Sapphire is now in
+the **implementation phase** with Rust as the chosen host language.
+This phase ends when Sapphire has a first usable compiler + runtime
+that can run the M9 example programs end-to-end (see
+`docs/project-status.md` §Current phase for the canonical
+exit condition). At that point, revisit this section with the user
+— subsequent phases (self-host exploration, broader stdlib,
+ecosystem) will be scoped separately.
 
-- Stay neutral about the eventual host language. Do not bake "this is
-  how we would write it in Rust / OCaml / Haskell / TypeScript" into
-  spec documents. Prefer BNF, judgement rules, type rules, and
+- **Spec tree (`docs/spec/`) stays host-language-neutral.** Do not
+  bake "this is how Rust expresses it" into spec documents. Spec
+  remains the target-contract for the implementation and any future
+  self-host rewrite. Prefer BNF, judgement rules, type rules, and
   pseudo-code when illustrating.
-- Do not scaffold a compiler project, add a `Cargo.toml` /
-  `package.json` / `dune-project` / `Gemfile`, or install a language
-  toolchain until the implementation-language decision happens in a
-  later phase.
-- If the user asks for implementation or a prototype that is obviously
-  tied to a specific host language, surface the tension first — they
-  may want to revisit the ordering or deliberately prototype.
-- Record spec decisions in a design doc inside the repo (under
-  `docs/spec/`) rather than only in conversation.
+- **Compiler scaffolding is unblocked.** `Cargo.toml`, `src/`,
+  rustup / rustfmt / clippy config, CI workflows, and language-
+  toolchain setup are now expected work. Do not add `package.json`
+  / `dune-project` / `Gemfile` etc. — the host language decision
+  (Rust) is settled per `docs/impl/05-decision.md`.
+- **Record decisions in the repo, not only in conversation.** Spec
+  decisions live in `docs/spec/`; implementation-side decisions
+  live in `docs/impl/`; build-pipeline decisions live in
+  `docs/build/`. Trivial code review comments can stay in chat,
+  but anything shaping the code's structure goes in a doc.
+- **Open-question tracking** continues via `docs/open-questions.md`
+  as the living index. Any new OQ discovered during implementation
+  goes there with an `I-OQk` ID (see that document's naming rules).
+- **Rust-specific choices during implementation** — crate selection,
+  MSRV pinning, error-handling patterns, parser strategy — are
+  recorded under `docs/impl/` before the code change that assumes
+  them, so the rationale survives.
 
 ## Git, GitHub, and out-of-scope systems
 

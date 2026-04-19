@@ -29,6 +29,9 @@ Sapphire のドキュメント群（`docs/spec/`・`docs/build/`・
 2. 本文書の該当セクションに 1 行エントリを追加する。ID 命名規則：
    - 仕様文書（`docs/spec/`）由来：`NN-OQk`（例：`10-OQ8`）。
    - ビルド文書（`docs/build/`）由来：`B-NN-OQk`（例：`B-03-OQ5`）。
+   - 実装文書（`docs/impl/`）由来：`I-OQk`（例：`I-OQ2`）。
+     2026-04-19 の Rust 決定以降、実装時に浮上した OQ はこの
+     接頭で §1.5 に登録する。
    - チュートリアル（`docs/tutorial/`）の §仕様への気付き 由来：
      `T-NN-k`（例：`T-05-1`）。OQ ではなく定性フィードバックな
      ので `-OQ` を付けない。
@@ -198,6 +201,19 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 13-OQ3 | `docs/roadmap.md` の扱い | DECIDED | living document として次フェーズも維持。2026-04-18 user 承認。spec-first の節は「完了」マークを付けるが削除はしない。 |
 
 ---
+
+## 1.5 実装（Rust ホスト）由来 (docs/impl/)
+
+2026-04-19 のホスト言語決定（Rust）に伴い発生した OQ。実装着手
+時に決める必要があるものを列挙。
+
+| ID | 要旨 | Status | 決定 / メモ |
+|---|---|---|---|
+| I-OQ1 | Rust MSRV | DEFERRED-IMPL | edition 2024 解禁（1.85+）は確定。具体の数字は I2 着手時に固定。 |
+| I-OQ2 | Parser 戦略 | DEFERRED-IMPL | `chumsky` / `nom` / `lalrpop` / 手書き再帰下降のどれか。I3（レキサ着手）前にパイロットで判断。 |
+| I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
+| I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
+| I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 

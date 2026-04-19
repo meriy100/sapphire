@@ -1,24 +1,29 @@
-# Sapphire 仕様策定ロードマップ
+# Sapphire ロードマップ
 
-`docs/project-status.md` で述べた **spec-first フェーズ** の内側で、
-どの順序でどんな文書を書いていくかを列挙する。各マイルストーンの成果
-物は原則として `docs/spec/NN-*.md`（英、規範）と
-`docs/spec/ja/NN-*.md`（日、翻訳）のペアで出る（`CLAUDE.md` の
-writing conventions 参照）。
+本文書は Sapphire の全フェーズを横断する living document で、
+マイルストーンの進捗を一覧する。
+
+- **spec-first フェーズ**（～ 2026-04-19、完了）— §現状 の
+  M1〜M10 と T1/B1 はこのフェーズの成果物。以後は履歴として保持。
+- **実装フェーズ**（2026-04-19 ～）— §現状 の I1（Rust 決定
+  済）以降。I2 スキャフォールディング、I3 レキサ等が続く。詳細
+  は `docs/impl/` 配下で設計メモ化。
+
+各マイルストーンの成果物は、spec-first フェーズでは
+`docs/spec/NN-*.md`（英、規範）と `docs/spec/ja/NN-*.md`（日、
+翻訳）のペア。実装フェーズでは設計メモは `docs/impl/NN-*.md`
+（日、single-language）、コードは `src/` 配下。
 
 順序は目安であって絶対ではない。依存関係が許す限り並行して進めてよ
-く、後続マイルストーンで遡って書き直すのも前提とする。このロードマッ
-プ自体 living document として、マイルストーン完了時・方針変更時に更
-新する。
+く、後続マイルストーンで遡って書き直すのも前提とする。
 
 本文書は `docs/spec/` 配下の仕様書ではなく `docs/` 直下の design
 note であり、`CLAUDE.md` writing conventions の dual-language 対象外
 である（日本語のみ）。
 
-未決定仕様の一覧と処理方針は `docs/open-questions.md`（living
-document）で集中管理する。本 roadmap は「今どこまで draft が揃
-っているか」を示す index の側面を持つのに対し、open-questions は
-各 draft に残っている OQ の個別処理を追う。
+未決定事項の一覧と処理方針は `docs/open-questions.md`（living
+document）で集中管理する。本 roadmap は「今どこまで進んだか」を
+示す index、open-questions は個別 OQ の処理を追うトラッカー。
 
 文書番号（`03-*` 以降）は完了順に振る。マイルストーンの並行進行中は
 番号を予約せず、先に draft が出たものから次の番号を取る。既存の
@@ -383,11 +388,14 @@ spec-first フェーズのロードマップ (M1–M10) 完了と並行して、
   で書き直す。HKT / `Functor f` / `Monad m` の一般化した視点は
   新設する「発展篇」に隔離する。作業対象は `docs/tutorial/05-*.md`
   と `06-*.md`、および新 chapter（07 以降の発展篇）。
-- **I1 ホスト言語選定** (2026-04-18 着手) — `docs/impl/` ツリー
-  を立ち上げ、ホスト言語候補（Rust / OCaml / Haskell / Ruby /
-  TypeScript / Crystal）を評価基準に沿って比較。overview・
-  criteria・candidates・matrix が揃った段階で、重み調整と
-  プロトタイプを経て `05-decision.md` に決定を記録する。
+- **I1 ホスト言語選定** (2026-04-18 着手、**2026-04-19 Rust で
+  決定**) — `docs/impl/05-decision.md` に決定記録。感度分析でも
+  首位が揺れなかったため、プロトタイプを挟まずに早期決定した。
+  spec-first フェーズの CLAUDE.md ルールはここで実装フェーズ用
+  に改訂される（`CLAUDE.md` 参照）。
+- **I2 スキャフォールディング** (2026-04-19 以降) — `Cargo.toml`
+  と `src/` の基本モジュール構造、CI の雛形を整える。詳細は
+  着手時に docs/impl/ に追記。
 
 これらは仕様の delta ではない（規範は 01〜13）が、仕様を読み解く
 ／実装するための支援文書として spec-first フェーズ完了と並行して
