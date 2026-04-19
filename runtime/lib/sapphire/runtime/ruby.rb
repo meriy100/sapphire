@@ -46,15 +46,62 @@ module Sapphire
     #
     # Per spec 11 §Execution model the default execution model is
     # **single-threaded on the Ruby side**: each `>>=` step fully
-    # completes before the next begins. This R4 implementation
-    # evaluates actions synchronously on the caller's thread — a
-    # deliberate simplification. Spawning a dedicated Ruby
-    # evaluator thread (so that `run` blocks the Sapphire caller
-    # on a distinct OS thread) is R5's responsibility per
-    # docs/impl/06-implementation-roadmap.md §Track R. The
-    # observable semantics here already satisfy spec 11 §Execution
-    # model items 1-5 because no sub-step can observe that the
-    # evaluator thread is in fact the caller thread.
+    # completes before the next begins. R5 (this implementation)
+    # additionally honours spec 11 item 1's "fresh Ruby evaluator
+    # thread per `run`" contract by spawning a dedicated
+    # `Thread.new { ... }.value` per `run` invocation. The
+    # observable semantics here satisfy spec 11 §Execution model
+    # items 1-5:
+    #
+    # - item 1 (blocking caller, fresh thread): `run` joins the
+    #   evaluator thread via `Thread#value` before returning.
+    # - item 2 (sub-steps on that thread): every `:pure` / `:embed`
+    #   / `:bind` step runs inside the spawned thread's body.
+    # - item 3 (sequential `>>=`): the evaluator loop is
+    #   synchronous; no scheduling is admitted.
+    # - item 4 (per-step fresh local scope): each `prim_embed`
+    #   block is a fresh Ruby closure with fresh block-locals.
+    # - item 5 (raise short-circuits): the first raised
+    #   `StandardError` propagates out of the evaluator loop.
+    #
+    # ### What is and is not isolated across `run` calls
+    #
+    # Fully isolated (docs/impl/16-runtime-threaded-loading.md
+    # §分離の境界):
+    #
+    # - Ruby local variables of the snippet block (fresh block
+    #   scope per embed, plus a fresh `Thread` so no caller-side
+    #   locals leak in).
+    # - `Thread.current[:...]` fibre-local / thread-local
+    #   storage — a fresh `Thread` means a fresh storage scope,
+    #   per spec 11 §Execution model item 4.
+    #
+    # Shared (with the caller thread and other `run`s) by design,
+    # because the Ruby VM offers no in-process isolation for them
+    # without switching to `fork` (CoW, not portable) or Ractor
+    # (would also isolate immutable constants, which generated
+    # code depends on):
+    #
+    # - Global variables (`$...`), top-level constants, and the
+    #   `require` / `$LOADED_FEATURES` table.
+    # - Monkey-patches to core classes, class variables, and any
+    #   other process-wide mutable state.
+    #
+    # Generated code (I7c) therefore must not rely on
+    # `run`-to-`run` isolation of Ruby global state; the spec-11
+    # "fresh Ruby-side scope" is interpreted per
+    # `docs/impl/16-runtime-threaded-loading.md` to cover locals
+    # and thread-locals only.
+    #
+    # ### Reentrant `run`
+    #
+    # Reentrant invocations (`Ruby.run(inner)` called from inside
+    # a `prim_embed` block whose outer `run` is still on the
+    # stack) are admitted (I-OQ47). Each reentrant call spawns
+    # its own evaluator thread and joins it before returning,
+    # yielding independent `[:ok, _]` / `[:err, _]` results with
+    # no state shared between inner and outer evaluator threads
+    # (beyond the unavoidable process-global state listed above).
     #
     # There is deliberately no `unsafeRun` / escape hatch (spec 11
     # §There is no `unsafeRun` / `runIO`).
@@ -167,31 +214,59 @@ module Sapphire
       #     [:ok,  sapphire_value]
       #     [:err, ruby_error]
       #
-      # The `[:ok, ·]` / `[:err, ·]` pair is the R4 boundary
+      # The `[:ok, ·]` / `[:err, ·]` pair is the R4/R5 boundary
       # convention for the `Result RubyError a` shape per spec 11
       # §`run`; marshalling into the tagged-hash `Result` ADT
       # (`{ tag: :Ok, values: [a] }` / `{ tag: :Err, values: [e] }`)
-      # is R5's job when it wires `run` into the generated Ruby
-      # module. The flat-tuple shape here is deliberately friendly
-      # for pattern-matching from Ruby (`case run(action) in [:ok,
-      # v]; ...; end`) while preserving the short-circuit
-      # semantics of spec 11 §Execution model item 5.
+      # is deferred to the generated code layer (I7c) per I-OQ40
+      # (DEFERRED-IMPL, status unchanged after R5). The flat-tuple
+      # shape is deliberately friendly for pattern-matching from
+      # Ruby (`case run(action) in [:ok, v]; ...; end`) while
+      # preserving the short-circuit semantics of spec 11
+      # §Execution model item 5.
       #
       # Per spec 10 §Exception model the rescue scope is
       # `StandardError` — system-level exceptions (`Interrupt`,
       # `SystemExit`, `NoMemoryError`, `SystemStackError`, …)
-      # propagate past the boundary by design.
+      # propagate past the boundary by design. When they are raised
+      # inside the evaluator thread, `Thread#value` re-raises them
+      # on the caller thread so the propagation still crosses the
+      # `run` boundary intact.
       def self.run(action)
         unless action.is_a?(Action)
           raise Errors::BoundaryError,
                 "run expects an Action, got #{action.inspect}"
         end
-        begin
-          value = evaluate(action)
-        rescue StandardError => e
-          return [:err, RubyError.from_exception(e)]
+        # Spawn a fresh evaluator thread per `run` invocation (spec
+        # 11 §Execution model item 1). `Thread#value` blocks the
+        # caller until the evaluator completes and re-raises any
+        # exception that escaped the evaluator thread, which is
+        # how `Interrupt` / `SystemExit` / other non-StandardError
+        # signals cross the boundary unaltered (B-03-OQ5 DECIDED).
+        #
+        # `Thread#report_on_exception = false` suppresses Ruby's
+        # default "thread terminated with exception" warning on
+        # stderr; the exception is still captured by `value`. The
+        # R4-style `[:ok, _]` / `[:err, _]` conversion happens
+        # inside the thread body so the tuple itself is the
+        # thread's return value in the success / StandardError
+        # cases.
+        thread = Thread.new do
+          # Suppress MRI's default "thread terminated with
+          # exception" stderr trail when a non-StandardError (e.g.
+          # Interrupt) is raised inside the evaluator — the signal
+          # is captured by Thread#value below and re-raised on the
+          # caller thread, which is where the trail should be
+          # attributed if the caller does not rescue it.
+          Thread.current.report_on_exception = false
+          begin
+            value = evaluate(action)
+            [:ok, value]
+          rescue StandardError => e
+            [:err, RubyError.from_exception(e)]
+          end
         end
-        [:ok, value]
+        thread.value
       end
 
       # Internal: evaluate an action and return its Sapphire-side
