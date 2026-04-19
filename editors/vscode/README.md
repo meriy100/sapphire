@@ -23,9 +23,10 @@ Sapphire 言語用の VSCode 拡張。`.sp` ファイルに
     word pattern、簡易 indent rule、`--` コメント継続の `onEnter`
 - **LSP client**
   - `sapphire-lsp` を stdio transport で起動し、initialize /
-    shutdown / textDocument sync / publishDiagnostics / hover /
-    goto-definition（L1〜L5 時点で実装済の機能）に追随
-  - 現状 parse-error 診断と goto-def までが動作ライン
+    shutdown / textDocument sync（incremental）/ publishDiagnostics
+    に追随。`textDocument/definition` は L5 実装中で、L4 hover /
+    L6 completion は未着手。
+  - 現状は **lex / layout / parse エラーの診断** が動作ライン。
 
 機能カバレッジの全体像は
 `docs/impl/06-implementation-roadmap.md` §Track L を参照。
