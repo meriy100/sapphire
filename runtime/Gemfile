@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+# Pull in the local gemspec; development dependencies (rspec) are
+# declared there via spec.add_development_dependency.
+gemspec
