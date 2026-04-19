@@ -164,14 +164,14 @@ build することになる（§3 で掘り下げ）。
 #### バージョン整合
 
 `sapphire` と `sapphire-runtime` は **同時リリース** が原則。
-`sapphire` の gemspec で `add_runtime_dependency "sapphire-runtime",
-"= #{Sapphire::VERSION}"` と書けば、CLI と runtime の version ズレ
-は gem resolver が検出する。逆に互換幅を広げたいなら `"~> X.Y"`。
+§5 で詳述する major.minor 同期ポリシーに従い、`sapphire` の gemspec
+で `add_runtime_dependency "sapphire-runtime", "~> X.Y"` を書けば
+resolver が整合を担保する。
 
-CLI 起動時に `Gem.loaded_specs['sapphire-runtime']&.version`
-（あるいは `Gem::Specification.find_all_by_name('sapphire-runtime')
-.first&.version`）を参照してメジャーマイナー一致を確認し、ズレて
-いれば警告する、という防御もできる（§5 で詳述）。
+CLI 起動時の防御：まず `Gem.loaded_specs['sapphire-runtime']&.version`
+（Bundler 経由なら必ず入る）を参照し、それが nil の場合の fallback
+として install 済 gem から最大 version を拾う（詳細は §5 §起動時
+チェック）。ズレが検出されれば警告・エラーする。
 
 #### アップデート経路
 
@@ -436,7 +436,7 @@ GitHub Actions matrix で native runner を使い分ける：
 | Target triple              | GitHub runner          | 備考 |
 |----------------------------|------------------------|------|
 | `x86_64-unknown-linux-gnu` | `ubuntu-latest`        | native |
-| `aarch64-unknown-linux-gnu`| `ubuntu-24.04-arm`（GA から提供）もしくは `ubuntu-latest` + `cross` / `cargo-zigbuild` | GitHub の ARM runner はパブリックリポジトリで無料利用可。2025 年以降 GA。 |
+| `aarch64-unknown-linux-gnu`| `ubuntu-24.04-arm`（2024-10 GA、public repo で無料） もしくは `ubuntu-latest` + `cross` / `cargo-zigbuild` | 旧来は QEMU が必要だったが、native runner が来たので D2 から直接乗れる。 |
 | `x86_64-apple-darwin`      | `macos-13`             | native |
 | `aarch64-apple-darwin`     | `macos-14` / `macos-latest` | Apple Silicon runner |
 | `x86_64-pc-windows-msvc`   | `windows-latest`       | native |
@@ -492,7 +492,11 @@ Gem::Specification.new do |spec|
   spec.license               = "MIT"
   # platform は CI matrix で gem build 時に --platform で上書き
   # あるいは gemspec 内で ENV["GEM_PLATFORM"] を参照する
-  spec.add_runtime_dependency "sapphire-runtime", "~> #{Sapphire::CLI::VERSION}"
+  # major.minor だけ抜いて ~> にかける。§5 の「patch はズレてよい」
+  # ポリシーと同期。例えば CLI 0.3.2 は "~> 0.3.0" を要求し、runtime
+  # 0.3.0 〜 0.3.x までを許容する。
+  runtime_major_minor = Sapphire::CLI::VERSION.split('.').first(2).join('.')
+  spec.add_runtime_dependency "sapphire-runtime", "~> #{runtime_major_minor}.0"
 end
 ```
 
@@ -548,8 +552,11 @@ CLI 起動時に（あるいは `sapphire build` が runtime を呼び出す
 段階で）、以下に類する確認を行う：
 
 ```
-rt = Gem.loaded_specs['sapphire-runtime']&.version ||
-     Gem::Specification.find_all_by_name('sapphire-runtime').first&.version
+# Bundler 経由（実行時パスに入っている runtime）を優先
+rt = Gem.loaded_specs['sapphire-runtime']&.version
+# Bundler 非経由 fallback：install 済の中で最新を探す
+rt ||= Gem::Specification.find_all_by_name('sapphire-runtime')
+          .max_by(&:version)&.version
 # rt が nil（runtime 未インストール）なら install 案内で exit。
 # rt が想定範囲（例: Gem::Requirement.new("~> 0.3.0")）外なら warn / error。
 ```
@@ -557,9 +564,14 @@ rt = Gem.loaded_specs['sapphire-runtime']&.version ||
 CLI が想定する範囲（例えば `Gem::Requirement.new("~> 0.3.0")`）と
 合致しない場合は警告、もしくは `--strict` フラグで error。
 
-この check は gem resolver の整合と二重だが、user が素の Ruby で
-`sapphire-runtime` を別途 install している場合（Bundler 非経由）
-に有効。
+上の 2 段構え：`Gem.loaded_specs` は **実際にロードされている**
+spec を返し、Bundler 環境では Gemfile が pin した version が入る。
+Bundler を噛まず素の `ruby` / `gem` で動かしている場合は
+`loaded_specs` が空なので fallback として `find_all_by_name` を
+`.max_by(&:version)` で拾う（`find_all_by_name.first` は install
+順に依存し必ずしも最新ではないため最大値を取る）。`Gem::
+Specification.find_by_name` は現存の API だが runtime 未インス
+トール時に例外を投げるので ここでは採らない。
 
 ### 生成コードへの stamp
 
@@ -623,9 +635,15 @@ time hook（B-03-OQ6）でこの header を読む設計に拡張できる。
 ### 先行 squatting 回避
 
 D3 着手前に、`sapphire` および `sapphire-compiler` gem 名を
-rubygems.org で予約する（空の 0.0.0 gem を push する or
-`gem owner` で事前に押さえる）。rubygems の squatting policy は
-運営裁量なので、こちらで先に占有するのが安全。
+rubygems.org 上で **現状の占有者がいるか** 確認する（本 D1 の時点
+では未確認、D3 進行直前の公開可能性チェックとして実施）。空い
+ていれば、まず自アカウントの所有として `gem owner` で抑えるか、
+0.0.0 プレースホルダを push するかを選ぶ。ただし **0.0.0 の空
+push は rubygems.org のポリシー上グレー**（squatting 目的と
+みなされると運営が削除する裁量がある）ため、**公開可能な最小
+実装を 0.1.0 として push する** のが安全。先占有者がいた場合は
+`sapphire-lang` や `sapphirec` など別名への振り替えを D3 直前に
+再検討する。
 
 ## 7. 残される open questions
 
