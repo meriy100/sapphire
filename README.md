@@ -29,7 +29,8 @@ Sapphire は Haskell 並の表現力（型クラス + higher-kinded types）を
 - `crates/sapphire-compiler/` — コンパイラ本体（CLI バイナリ予定）。
 - `crates/sapphire-lsp/` — Language Server 実装。
 - `runtime/` — `sapphire-runtime` gem（Ruby）。
-- `editors/vscode/` — VSCode extension（L1 以降で populate）。
+- `editors/vscode/` — VSCode extension（L1 scaffold、詳細は
+  `docs/impl/10-lsp-scaffold.md`）。
 - `examples/` — 動作確認用の実装サンプル（各トラックのマイル
   ストーン達成ごとにサブディレクトリが増える）。
 

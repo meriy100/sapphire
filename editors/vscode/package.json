@@ -1,0 +1,49 @@
+{
+  "name": "sapphire-vscode",
+  "displayName": "Sapphire",
+  "description": "Sapphire language support for Visual Studio Code (L1 scaffold).",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "meriy100",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meriy100/sapphire.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:sapphire"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sapphire",
+        "aliases": [
+          "Sapphire",
+          "sapphire"
+        ],
+        "extensions": [
+          ".sp"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}

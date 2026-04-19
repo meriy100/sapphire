@@ -80,9 +80,14 @@
 │       └── src/lib.rs
 ├── runtime/                   # Ruby sapphire-runtime gem（R1 で populate）
 │   └── .gitkeep
-└── editor/                    # VSCode extension（L7 で populate）
-    └── .gitkeep
+└── editors/                   # エディタ拡張（L1 で VSCode を populate）
+    └── vscode/                # TypeScript プロジェクト（Cargo workspace 外）
 ```
+
+L1 着手（`docs/impl/10-lsp-scaffold.md`）で placeholder の
+`editor/.gitkeep` は削除し、`editors/vscode/` として実体を置き
+直している。命名を複数形にしたのは、将来 Neovim / JetBrains 等の
+クライアントを兄弟ディレクトリとして並べる前提に立つため。
 
 ### クレートの責務
 
@@ -97,14 +102,16 @@
   選定された LSP クレート（`tower-lsp` 等）と `sapphire-core` に
   依存する形になる見込み。
 
-### `runtime/` と `editor/` のディレクトリ確保
+### `runtime/` と `editors/` のディレクトリ確保
 
 - `runtime/` は Ruby 側の `sapphire-runtime` gem の置き場。R1
   エージェントが `Gemfile` / `sapphire-runtime.gemspec` /
   `lib/sapphire/runtime.rb` 等を populate する。I2 ではディレク
   トリだけ切り、`.gitkeep` で git に拾わせる。
-- `editor/` は L7 で作る VSCode extension の置き場。同じく
-  `.gitkeep` のみ。
+- `editors/` はエディタクライアントの置き場。I2 時点では
+  `editor/.gitkeep`（単数）を置いていたが、L1（`docs/impl/10-lsp-
+  scaffold.md`）で `editors/vscode/` として VSCode 拡張を populate
+  した際、将来の複数エディタ対応を見越して **複数形** に改めた。
 
 ## MSRV（I-OQ1 の決着）
 
