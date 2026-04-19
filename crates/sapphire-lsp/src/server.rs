@@ -1,42 +1,69 @@
-//! `tower-lsp` server implementation for Sapphire (L1 scaffold).
+//! `tower-lsp` server implementation for Sapphire (L2 diagnostics).
 //!
-//! Only the protocol skeleton is handled at this stage:
+//! The server now wires enough of the protocol to publish parser /
+//! lexer / layout diagnostics back to the editor:
 //!
 //! - `initialize` / `initialized` / `shutdown` respond with the
 //!   minimum required by LSP 3.17.
-//! - `textDocument/didOpen` / `didChange` / `didClose` are logged but
-//!   otherwise ignored. A document store, diagnostics and richer
-//!   capabilities land in L2/L3.
+//! - `textDocument/didOpen` / `didChange` / `didClose` drive an
+//!   in-memory [`Document`] store keyed by `Url`. Every open or
+//!   change runs the `sapphire_compiler::analyze` pipeline and
+//!   publishes the resulting diagnostics via
+//!   `textDocument/publishDiagnostics`. A `didClose` publishes an
+//!   empty diagnostic set so stale markers disappear in the client.
 //!
-//! The advertised capabilities are intentionally minimal: only
-//! `textDocumentSync = Full`. Incremental sync, hover, completion,
-//! goto-definition etc. are broadened as later Track L milestones
-//! (L3/L4/L5/L6) land.
+//! Richer capabilities (hover, goto-def, completion, …) land in
+//! Track L's later milestones. Incremental sync is deferred as
+//! I-OQ9; every change runs a full reparse for now.
 
+use dashmap::DashMap;
+use sapphire_compiler::analyze::{AnalysisResult, analyze};
+use sapphire_compiler::error::CompileError;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+    Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
     InitializeParams, InitializeResult, InitializedParams, MessageType, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
+    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, LanguageServer};
 
+use crate::diagnostics::{build_line_map, compile_error_to_diagnostic};
+
+/// A single open text document as the server sees it.
+///
+/// Text is owned so that the analyzer can run without borrowing the
+/// `DashMap` entry guard for the duration of a (potentially slow)
+/// parse. `version` is the client-assigned monotonically increasing
+/// version counter LSP requires us to echo back on
+/// `publishDiagnostics`.
+#[derive(Debug, Clone)]
+pub struct Document {
+    pub text: String,
+    pub version: i32,
+}
+
 /// The Sapphire language server.
 ///
-/// Holds the `tower-lsp` client handle so that later milestones can
-/// push diagnostics and log messages to the editor. The L1 scaffold
-/// does not itself publish any diagnostics.
+/// Holds the `tower-lsp` client handle and an in-memory document
+/// store. The client handle is used for `window/showMessage`-style
+/// notifications and for `textDocument/publishDiagnostics`. The
+/// document store is keyed by the client-assigned `Url` and is
+/// updated on every `did_open` / `did_change`.
 #[derive(Debug)]
 pub struct SapphireLanguageServer {
     client: Client,
+    documents: DashMap<Url, Document>,
 }
 
 impl SapphireLanguageServer {
     /// Create a new server bound to the given `tower-lsp` client
     /// handle. The handle is used for `window/showMessage`-style
-    /// notifications and, later, `textDocument/publishDiagnostics`.
+    /// notifications and for `textDocument/publishDiagnostics`.
     pub fn new(client: Client) -> Self {
-        Self { client }
+        Self {
+            client,
+            documents: DashMap::new(),
+        }
     }
 
     /// Build the `InitializeResult` advertised to the editor.
@@ -57,6 +84,38 @@ impl SapphireLanguageServer {
             }),
         }
     }
+
+    /// Run the front-end pipeline over `text` and project the
+    /// resulting errors into LSP diagnostics.
+    ///
+    /// Exposed for tests — a real `tower-lsp::Client` is awkward to
+    /// mock, so we keep the pure "source → diagnostics" function
+    /// separately testable.
+    pub fn diagnostics_for(text: &str) -> Vec<Diagnostic> {
+        let AnalysisResult { errors, .. } = analyze(text);
+        compile_errors_to_diagnostics(&errors, text)
+    }
+
+    /// Update the document store and publish the resulting
+    /// diagnostics. Called from `did_open` / `did_change`.
+    async fn refresh(&self, uri: Url, text: String, version: i32) {
+        let diagnostics = Self::diagnostics_for(&text);
+        self.documents
+            .insert(uri.clone(), Document { text, version });
+        self.client
+            .publish_diagnostics(uri, diagnostics, Some(version))
+            .await;
+    }
+}
+
+/// Batch-render a slice of [`CompileError`]s into LSP diagnostics
+/// against a shared [`LineMap`] built from `source`.
+fn compile_errors_to_diagnostics(errors: &[CompileError], source: &str) -> Vec<Diagnostic> {
+    let map = build_line_map(source);
+    errors
+        .iter()
+        .map(|e| compile_error_to_diagnostic(e, &map))
+        .collect()
 }
 
 #[tower_lsp::async_trait]
@@ -79,34 +138,51 @@ impl LanguageServer for SapphireLanguageServer {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        let uri = params.text_document.uri.clone();
+        let version = params.text_document.version;
         tracing::info!(
-            uri = %params.text_document.uri,
-            version = params.text_document.version,
+            uri = %uri,
+            version,
             language = %params.text_document.language_id,
             "textDocument/didOpen",
         );
+        self.refresh(uri, params.text_document.text, version).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        let uri = params.text_document.uri.clone();
+        let version = params.text_document.version;
         tracing::info!(
-            uri = %params.text_document.uri,
-            version = params.text_document.version,
+            uri = %uri,
+            version,
             changes = params.content_changes.len(),
             "textDocument/didChange",
         );
+        // We advertise TextDocumentSyncKind::Full, so the client
+        // always sends a single content change with the complete
+        // document text. Pick the last one defensively (the spec
+        // permits multiple entries; the last one is the final state
+        // for Full sync).
+        let Some(change) = params.content_changes.into_iter().next_back() else {
+            return;
+        };
+        self.refresh(uri, change.text, version).await;
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
-        tracing::info!(
-            uri = %params.text_document.uri,
-            "textDocument/didClose",
-        );
+        let uri = params.text_document.uri.clone();
+        tracing::info!(uri = %uri, "textDocument/didClose");
+        self.documents.remove(&uri);
+        // Clear any lingering diagnostics so the client doesn't keep
+        // stale squiggles when the buffer is closed.
+        self.client.publish_diagnostics(uri, Vec::new(), None).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tower_lsp::lsp_types::{DiagnosticSeverity, NumberOrString};
 
     /// Smoke test: `initialize_result` advertises the L1 capability
     /// surface (Full text-document sync, named `sapphire-lsp` with
@@ -126,5 +202,45 @@ mod tests {
             }
             other => panic!("expected Full text-document sync, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn diagnostics_for_valid_source_is_empty() {
+        // A single top-level let with a signature is the smallest
+        // thing the pipeline consistently accepts.
+        let src = "\
+module M (x) where
+
+x : Int
+x = 1
+";
+        let diags = SapphireLanguageServer::diagnostics_for(src);
+        assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+    }
+
+    #[test]
+    fn diagnostics_for_lex_error_reports_error_severity() {
+        // Non-ASCII identifier start is a lex error per spec 02.
+        let src = "module M where\n\nαβ = 1\n";
+        let diags = SapphireLanguageServer::diagnostics_for(src);
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].severity, Some(DiagnosticSeverity::ERROR));
+        assert_eq!(diags[0].source.as_deref(), Some("sapphire"));
+        assert_eq!(
+            diags[0].code,
+            Some(NumberOrString::String("sapphire/lex-error".to_owned()))
+        );
+    }
+
+    #[test]
+    fn diagnostics_for_parse_error_reports_parse_code() {
+        // `data T` without `=` is a parse error.
+        let src = "module M where\n\ndata T\n";
+        let diags = SapphireLanguageServer::diagnostics_for(src);
+        assert_eq!(diags.len(), 1);
+        assert_eq!(
+            diags[0].code,
+            Some(NumberOrString::String("sapphire/parse-error".to_owned()))
+        );
     }
 }

@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 sapphire-core = { path = "../sapphire-core" }
+sapphire-compiler = { path = "../sapphire-compiler" }
 # tower-lsp 0.20.x ships with lsp-types 0.94.x. We track the caret
 # range of tower-lsp intentionally; lsp-types is not re-pinned at the
 # workspace level for L1 (see docs/impl/10-lsp-scaffold.md, I-OQ6).
@@ -24,5 +25,8 @@ tower-lsp = "0.20"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+# L2 のドキュメントストアで使う concurrent map。tower-lsp 5.5 系が
+# 既に推移依存として引き込んでいる版に合わせる。
+dashmap = "5"
 # serde / serde_json は L2（diagnostics payload など）で本 crate が
 # 直接使う段階で足す。現状は tower-lsp の推移依存で足りている。
