@@ -187,16 +187,18 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 2 | `impl/l4-hover` | **L4** hover（型情報） 🟢 |
 | 3 | `impl/d2-ci-cross` | **D2** CI cross-compile matrix 🟢 |
 
-### ウェーブ 7（I7 + R6 着地後、統合）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 7（I7 + R6 着地後、統合）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
 | 1 | `impl/i9-m9-finalize` | **I9** M9 end-to-end 最終審査 + 完成宣言 🟢 |
-| 2 | `impl/l6-completion` | **L6** completion 🟡 |
-| 3 | `impl/d3-release-prep` | **D3** 初回リリース準備（CHANGELOG / Release note / tag 準備まで、実 publish は user 判断） 🟡 |
+| 2 | `impl/l6-completion` | **L6** completion 🟢 |
+| 3 | `impl/d3-release-prep` | **D3** 初回リリース準備（CHANGELOG / Release note / tag 準備まで、実 publish は user 判断） 🟢 |
 
 I9 着地で実装フェーズの exit condition（第一版完成の 5 条件）に
-到達。詳細は `docs/impl/30-first-release-audit.md`。
+到達。詳細は `docs/impl/30-first-release-audit.md`。ロードマップ
+31 タスク全 🟢。実 tag push と gem push は user 判断事項として
+wave 7 外の `docs/impl/32-release-process.md` に手順化済。
 
 （L5 / L7 / T2c は先行着地済。）
 
