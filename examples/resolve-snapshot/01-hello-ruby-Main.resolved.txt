@@ -1,0 +1,103 @@
+ResolvedProgram (1 modules)
+
+== module Main ==
+  top-level:
+    priv value  greet  [value]
+    pub  value  main  [value]
+    priv value  makeMessage  [value]
+    priv value  rubyPuts  [value]
+  exports:
+    value main  -> Main.main
+  unqualified-scope:
+    value %  <- Prelude.%
+    value &&  <- Prelude.&&
+    value *  <- Prelude.*
+    value +  <- Prelude.+
+    value ++  <- Prelude.++
+    value -  <- Prelude.-
+    value /  <- Prelude./
+    value /=  <- Prelude./=
+    value ::  <- Prelude.::
+    value <  <- Prelude.<
+    value <=  <- Prelude.<=
+    value ==  <- Prelude.==
+    value >  <- Prelude.>
+    value >=  <- Prelude.>=
+    value >>  <- Prelude.>>
+    value >>=  <- Prelude.>>=
+    type Applicative  <- Prelude.Applicative
+    type Bool  <- Prelude.Bool
+    value Cons  <- Prelude.Cons
+    value EQ  <- Prelude.EQ
+    type Eq  <- Prelude.Eq
+    value Err  <- Prelude.Err
+    value False  <- Prelude.False
+    type Functor  <- Prelude.Functor
+    value GT  <- Prelude.GT
+    type Int  <- Prelude.Int
+    value Just  <- Prelude.Just
+    value LT  <- Prelude.LT
+    type List  <- Prelude.List
+    type Maybe  <- Prelude.Maybe
+    type Monad  <- Prelude.Monad
+    value Nil  <- Prelude.Nil
+    value Nothing  <- Prelude.Nothing
+    value Ok  <- Prelude.Ok
+    type Ord  <- Prelude.Ord
+    type Ordering  <- Prelude.Ordering
+    type Result  <- Prelude.Result
+    type Ruby  <- Prelude.Ruby
+    type Show  <- Prelude.Show
+    type String  <- Prelude.String
+    value True  <- Prelude.True
+    value compare  <- Prelude.compare
+    value compose  <- Prelude.compose
+    value concat  <- Prelude.concat
+    value concatMap  <- Prelude.concatMap
+    value const  <- Prelude.const
+    value filter  <- Prelude.filter
+    value flip  <- Prelude.flip
+    value foldl  <- Prelude.foldl
+    value foldr  <- Prelude.foldr
+    value fromMaybe  <- Prelude.fromMaybe
+    value fst  <- Prelude.fst
+    value head  <- Prelude.head
+    value id  <- Prelude.id
+    value join  <- Prelude.join
+    value length  <- Prelude.length
+    value map  <- Prelude.map
+    value mapErr  <- Prelude.mapErr
+    value maybe  <- Prelude.maybe
+    value negate  <- Prelude.negate
+    value not  <- Prelude.not
+    value null  <- Prelude.null
+    value print  <- Prelude.print
+    value pure  <- Prelude.pure
+    value readInt  <- Prelude.readInt
+    value result  <- Prelude.result
+    value return  <- Prelude.return
+    value show  <- Prelude.show
+    value snd  <- Prelude.snd
+    value tail  <- Prelude.tail
+    value unless  <- Prelude.unless
+    value when  <- Prelude.when
+    value ||  <- Prelude.||
+  qualifiers:
+    Main  -> Main
+    Prelude  -> Prelude
+  references:
+    84..88  global Prelude.Ruby [type]
+    104..109  global Main.greet [value]
+    123..128  global Main.greet [value]
+    195..201  global Prelude.String [type]
+    205..209  global Prelude.Ruby [type]
+    226..234  global Main.rubyPuts [value]
+    236..247  global Main.makeMessage [value]
+    248..252  local  name
+    324..330  global Prelude.String [type]
+    334..340  global Prelude.String [type]
+    360..384  global Prelude.++ [value]
+    373..377  local  name
+    373..384  global Prelude.++ [value]
+    451..457  global Prelude.String [type]
+    461..465  global Prelude.Ruby [type]
