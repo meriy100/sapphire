@@ -229,6 +229,9 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ31 | バイナリ署名 / SBOM の範囲 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §6。gem の `--sign`、OIDC trusted publishers、sigstore 署名、`cargo auditable`、`cargo sbom` のどこまでを v0 で含めるか。draft は `--sign` 採用せず、trusted publisher で push、SBOM は D2 で判断。D3 着地前に確定。 |
 | I-OQ32 | Windows の first-class / best-effort 線引き | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3 / §6。x86_64-pc-windows-msvc は first-class、aarch64 は best-effort を draft。CI matrix に Windows を加えるタイミング（Wave 2b vs 2c）も含めて D2 で確定。 |
 | I-OQ33 | CLI と runtime gem の version 一致ポリシー | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §5。draft は「major.minor 一致、patch はズレ可（`add_runtime_dependency "sapphire-runtime", "~> X.Y.0"`）」。起動時 version check の厳格さ（warning vs error）も合わせて D3 前に確定。 |
+| I-OQ39 | effect monad の `run` 再入と `prim_embed` block の closure キャプチャ相互作用 | DEFERRED-IMPL (R5 で再評価) | `docs/impl/14-ruby-monad-runtime.md` §effect monad 値の内部表現 / §I7c 生成コードのインタフェース想定。ネストした `run` の意味論、block 内で関数値 / lambda をキャプチャした際の純粋性境界。spec 11 §Execution model は再入について silent。11-OQ5（Ruby 側共有状態の脱出口）と近接するが別問題。R5 で thread 分離が入った時点で再評価。 |
+| I-OQ40 | `Ruby.run` の返却形: タプル vs `Result` ADT | DEFERRED-IMPL (R5 で再評価) | `docs/impl/14-ruby-monad-runtime.md` §`run` の返却形。R4 default は `[:ok, a] / [:err, e]` の 2 要素タプル（Ruby 側からのパターンマッチ利便性）。spec 11 §`run` は `Result RubyError a` を規定しているので、生成コード（I7c）でタグ付きハッシュ ADT に包むか、ランタイム側で最初から ADT 形で返すか、R5 で生成コード接続時に確定。 |
+| I-OQ41 | `prim_embed` block 内の `Interrupt` / ensure 責務 | DEFERRED-IMPL | `docs/impl/14-ruby-monad-runtime.md` §新規 OQ。B-03-OQ5 DECIDED により `Interrupt` は境界を propagate するが、ensure で後片付けが必要な Ruby スニペット（開いたファイル / ソケット）が出てきたときにどこまでランタイムが責務を持つか。11-OQ2（タイムアウト）と境界が重なる。M9 例題で必要性が見えたら spec 11 側で決着。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
