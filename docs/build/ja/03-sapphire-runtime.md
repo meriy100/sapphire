@@ -130,7 +130,7 @@ end
 生成コードはこれらヘルパを厳密に**必要としない** — 各所で
 `{ tag: :Just, values: [x] }` をインライン展開してもよい — が、
 構築を `ADT.make` に集約することで、ランタイムが表現を進化させ
-る（例：frozen-hash ラッパを追加、10 OQ 7 に従い `Struct` へ
+る（例：frozen-hash ラッパを追加、10 OQ 5 に従い `Struct` へ
 移行）際に、各プロジェクトでコンパイラを再実行せずに済む。
 
 `Sapphire::Runtime::ADT.match` は例示；生成コードが `ADT.match

@@ -30,7 +30,8 @@ Deliberately deferred:
 - Package boundaries (multiple packages, dependency resolution,
   build artefacts).
 - Hiding constructors while exposing the type (Haskell's
-  `Type(..)` vs `Type`). See 08 OQ 2.
+  `Type(..)` vs `Type`) is handled by the export-item forms —
+  see §Visibility.
 - `deriving` clauses interacting with cross-module visibility.
   That question is still 03 OQ 4 / M6.
 
@@ -56,8 +57,14 @@ normative is:
   compilation.
 
 A single-file compilation without an explicit `module` declaration
-is admitted as syntactic sugar for `module Main where ...`; this
-is purely a convenience for small examples.
+is admitted as syntactic sugar for `module Main where ...`. This
+sugar is **restricted to single-file scripts**: any file that is
+imported by another module must carry an explicit `module` header.
+The build tool is expected to reject a header-less source file as
+soon as anything `import`s it, since the sugar's "module name is
+`Main`" default is only coherent when the file stands alone. This
+matches Haskell's long-standing practice of requiring a header on
+library modules.
 
 ## Abstract syntax (BNF)
 
@@ -177,7 +184,18 @@ orphan rule of §Instances and modules).
 
 Class-method export granularity is **all-or-nothing** in this draft
 (`class C` or `class C(..)` — no per-method selection). Finer
-granularity is 08 OQ 1.
+granularity is 08 OQ 4.
+
+**Leaked private types.** If an exported top-level signature
+mentions a type (or class) that is itself private to the defining
+module, the signature *leaks* an identifier that importers cannot
+name. The compiler **rejects such a signature at definition time**,
+not at the importing-module use site. Rationale: the early error
+is raised in the module that introduced the inconsistency, which
+is also the module that can fix it — by exporting the type, by
+making the binding private, or by rewording the signature to avoid
+the private type. A late diagnostic at each downstream use site
+would spread the blame and obscure the root cause.
 
 ### Imported names and scope
 
@@ -278,7 +296,7 @@ and keeps instance-resolution closure computable by a single pass.
 Relaxing this would require either lazy module evaluation (with
 the attendant ordering pitfalls) or Haskell-style `.hs-boot`
 signature files; neither is justified by currently-drafted
-examples. See 08 OQ 4 for the escape question.
+examples. See 08 OQ 2 for the escape question.
 
 ## Instances and modules (refining 07)
 
@@ -352,7 +370,7 @@ same rule as §Visibility's two-imports case:
 Re-exporting lets an umbrella module present a curated API across
 several implementation modules. Whether the re-export form should
 admit selective projection (e.g. `module Data.List (foo, bar)`-style)
-is open; see 08 OQ 3.
+is open; see 08 OQ 1.
 
 ## Design notes (non-normative)
 
@@ -394,35 +412,15 @@ is open; see 08 OQ 3.
 
 ## Open questions
 
-1. **`Maybe` vs `Maybe(..)` defaults.** Sapphire's default when a
-   type appears in an export list without a constructor clause is
-   "type only, no constructors." Haskell's is the same. An
-   alternative would be `Maybe` ≡ `Maybe(..)` (export-everything
-   by default). Draft: no.
-
-2. **Diagnostic timing for leaked private types.** A private type
-   used in an exported signature leaks an identifier that
-   importers cannot name. Should the compiler reject such a
-   signature at *definition time* (early, clear error in the
-   defining module), or accept it silently and let importers fail
-   at use sites (late, actionable error at the call site)? Draft
-   is silent; both are defensible.
-
-3. **Selective re-exports.** `module M (foo, bar)` style selective
+1. **Selective re-exports.** `module M (foo, bar)` style selective
    re-export? Draft admits only whole-module re-export. Selective
    forms (either `module M (foo)` or `M.foo`) are OQ.
 
-4. **Mutual recursion across modules.** Strictly disallowed at
+2. **Mutual recursion across modules.** Strictly disallowed at
    this layer. Haskell admits it via `hs-boot` files; Sapphire may
    eventually need a similar escape. Default: no.
 
-5. **Default `module Main` without a header.** Draft admits it as
-   sugar for small examples. Whether library files must have an
-   explicit `module` header, or whether any `.sp` file may omit
-   it, is OQ. Leaning toward "library files require the header,
-   single-file scripts may omit".
-
-6. **Module-level fixity declarations.** 05 / 07 use a fixed
+3. **Module-level fixity declarations.** 05 / 07 use a fixed
    operator table with tiers. If 05 OQ 3 (user-declarable fixity)
    ever flips yes, fixity declarations would be module-scoped and
    this document would need to specify export / import semantics
@@ -430,7 +428,7 @@ is open; see 08 OQ 3.
    also re-export fixity declarations. Not planned now; noted for
    completeness.
 
-7. **Per-method class export.** The draft admits only
+4. **Per-method class export.** The draft admits only
    `class C` or `class C(..)`. Haskell admits `class C(m1, m2)` to
    export selected methods. Whether to extend 08's
    `export_item` grammar with a similar form is open.

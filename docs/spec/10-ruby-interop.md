@@ -166,6 +166,14 @@ order is not preserved on the Ruby side — `Hash` is insertion-
 ordered in Ruby 1.9+ but Sapphire records are order-insensitive
 at the type level (04), so any insertion order is admissible.
 
+Symbol keys — not string keys — are the contract. A string-keyed
+alternative (`{ "f1" => ruby(v1), ... }`) would round-trip JSON
+more naturally, but Sapphire field names already share the
+`lower_ident` shape of Ruby symbols and are a closed set known
+statically, so the symbol-keyed form preserves Ruby's
+conventional reading of hash-as-record without any loss of
+expressiveness.
+
 Ruby values returned to Sapphire where a record type is expected
 must be a `Hash` whose key set is exactly the field set of the
 record type; extra or missing keys are runtime errors at the
@@ -196,10 +204,12 @@ Err e          → { tag: :Err,     values: [ruby(e)] }
 Ok  a          → { tag: :Ok,      values: [ruby(a)] }
 ```
 
-(An optional surface convenience is to allow the Ruby side to
+(An optional surface convenience would allow the Ruby side to
 return the payload directly for `Maybe a` with `nil` standing in
 for `Nothing`. This is tempting but conflates `Just nil` with
-`Nothing`; the draft rejects it. See 10 OQ 1.)
+`Nothing`; Sapphire **does not admit** the shortcut. A Ruby
+snippet returning to a `Maybe a` context must produce the
+tagged-hash envelope like any other ADT.)
 
 A user record type `{ tag : String, values : List Int }` marshals
 (per §Records) to a Ruby hash whose *shape* is indistinguishable
@@ -397,7 +407,7 @@ Naming details:
 - Sapphire operators like `(+)` or `(>>=)` have `upper_ident`-free
   representations in Ruby. They become methods with mangled
   names like `op_plus` / `op_bind`. The exact mangling scheme is
-  10 OQ 2.
+  10 OQ 1.
 
 ## Interaction with other documents
 
@@ -455,35 +465,25 @@ Naming details:
 
 ## Open questions
 
-1. **`nil`-for-`Nothing` shortcut.** Admit the shorthand where a
-   Ruby-returned `nil` maps to `Nothing` and any non-nil value to
-   `Just x`? Loses distinction between `Just nil` and `Nothing`.
-   Draft: no.
-
-2. **Operator-method mangling scheme.** What is the exact Ruby
+1. **Operator-method mangling scheme.** What is the exact Ruby
    method-name mapping for operators like `(+)`, `(>>=)`, `(::)`?
    Options: `op_plus` / `op_bind` / `op_cons`, or
    `sapphire_op_7_6_plus` (include tier), or Unicode-like
    escape. Draft: unspecified; settle during implementation.
 
-3. **Symbol-keyed vs string-keyed hashes.** Records use symbol
-   keys (`{ f1: ... }`). A string-keyed alternative (`{ "f1" => ... }`)
-   would interoperate better with some Ruby libraries (JSON
-   round-trips). Draft: symbol-keyed.
-
-4. **Exception backtrace structure.** `RubyError.backtrace` is a
+2. **Exception backtrace structure.** `RubyError.backtrace` is a
    `List String` today. A more structured form
    (`List { file : String, line : Int, method : String }`)
    would enable richer error surfacing. Draft: `List String`
    matches Ruby's `Exception#backtrace` directly.
 
-5. **Importing Ruby source from files.** Beyond inline `:=`
+3. **Importing Ruby source from files.** Beyond inline `:=`
    snippets, should Sapphire admit a `ruby_import "path.rb"`
    declaration that pulls an external Ruby file into the
    generated module? Draft: no; M9 may revisit if examples
    demand.
 
-6. **Ruby version support beyond 3.x.** The data model pins
+4. **Ruby version support beyond 3.x.** The data model pins
    Ruby 3.x (specifically Ruby 3.3 per
    `docs/project-status.md`). Earlier Ruby versions are out of
    scope — this is a decision, not an open question. The OQ kept
@@ -491,7 +491,7 @@ Naming details:
    arrives) require amending the marshalling contract; draft says
    "monitor, no action needed yet".
 
-7. **Higher-arity ADT constructors.** The tagged-hash
+5. **Higher-arity ADT constructors.** The tagged-hash
    representation scales to any constructor arity. No intrinsic
    upper bound; but for ergonomics the Ruby side might want a
    named-tuple-like wrapper (`OpenStruct`, `Struct`). Not
