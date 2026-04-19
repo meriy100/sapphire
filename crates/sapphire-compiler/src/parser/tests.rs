@@ -435,6 +435,20 @@ fn comparison_non_associative_rejected() {
 }
 
 #[test]
+fn data_decl_requires_equals_and_ctor() {
+    // spec 03 §Abstract syntax: `data T = C₁ | … | Cₘ` requires
+    // `=` and at least one constructor. Bare `data T` is rejected.
+    let e = parse_err("data T\n");
+    match e.kind {
+        super::ParseErrorKind::Expected { expected, .. }
+        | super::ParseErrorKind::UnexpectedEof { expected } => {
+            assert_eq!(expected, "`=`");
+        }
+        other => panic!("expected Expected/UnexpectedEof for `=`, got {other:?}"),
+    }
+}
+
+#[test]
 fn unary_minus_forms_negate() {
     let m = parse_expect("x = -3\n");
     match &m.decls[0] {

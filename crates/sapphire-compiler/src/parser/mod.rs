@@ -737,7 +737,8 @@ impl<'t> Parser<'t> {
         }
         // spec 03 §Abstract syntax: `data T a₁ … aₙ = C₁ … | … | Cₘ …`
         // は `=` と少なくとも 1 本の constructor を必須とする。GADT /
-        // abstract data decl は意図的にスコープ外（I-OQ3 で将来再訪）。
+        // existential / abstract data decl / record-shaped ctor は
+        // spec 03 §Out-of-scope で明示的にスコープ外。
         self.expect(&TokenKind::Equals, "`=`")?;
         let mut ctors = Vec::new();
         ctors.push(self.parse_data_ctor()?);
