@@ -14,13 +14,16 @@ modules that can be called from plain Ruby. A signature feature is an
 runs embedded Ruby snippets on a separate thread and threads the result
 back into the pure pipeline.
 
-As of 2026-04-19, Wave 1 of the implementation phase landed (Cargo
-workspace with three crates pinned to Rust 1.85.0, CI with Rust +
-Ruby jobs, `sapphire-runtime` gem scaffold, LSP stack selection,
-spec C-amendments). Wave 2 is in flight — lexer, runtime ADT helpers
-and boundary marshalling, LSP server scaffold + VSCode extension,
-tutorial ch5 rewrite, and distribution research. Progress is tracked
-in `docs/impl/06-implementation-roadmap.md`.
+As of 2026-04-19, Waves 1–4 and part of Wave 5 of the implementation
+phase have landed. The compiler pipeline is now **lexer → layout
+resolution → parser (with AST in `sapphire-core`) → name resolution**,
+with type checking (I6) and runtime thread/loading support (R5/R6)
+in flight. The LSP serves `publishDiagnostics` for lex/layout/parse
+errors over incremental text sync and is being extended with
+`textDocument/definition`. The tutorial now covers ch1–ch7 including
+a HKT/typeclasses bonus chapter. Distribution design is documented;
+actual cross-compile CI is the next wave. Progress is tracked in
+`docs/impl/06-implementation-roadmap.md`.
 
 ## Current phase: implementation (from 2026-04-19)
 
