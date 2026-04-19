@@ -1,0 +1,103 @@
+name: Release build
+
+# Track D2: platform matrix で Rust バイナリをビルドし、
+# artifact として保存する骨組み。D3（tag push → gem build →
+# rubygems.org push）はまだ行わない。詳細は
+# docs/impl/29-ci-cross-compile.md を参照。
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # D1 §3 で触れた当面の target。I7 で `sapphire` bin が
+  # 実体化するまでは `sapphire-lsp` を配送パイプラインの
+  # 通り道として使う（docs/impl/29-ci-cross-compile.md §暫定
+  # target）。
+  SAPPHIRE_RELEASE_BIN: sapphire-lsp
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            archive: tar
+            ext: ""
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+            archive: tar
+            ext: ""
+          - target: x86_64-apple-darwin
+            runner: macos-13
+            archive: tar
+            ext: ""
+          - target: aarch64-apple-darwin
+            runner: macos-14
+            archive: tar
+            ext: ""
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+            archive: zip
+            ext: ".exe"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        # rust-toolchain.toml pins 1.85.0 + rustfmt + clippy.
+        # `rustup show` materialises it for this job.
+        run: rustup show
+
+      - name: cargo build --release
+        run: cargo build --release --bin ${{ env.SAPPHIRE_RELEASE_BIN }}
+
+      - name: Stage artifact (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="${SAPPHIRE_RELEASE_BIN}"
+          stage="dist/${bin}-${{ matrix.target }}"
+          mkdir -p "${stage}"
+          cp "target/release/${bin}" "${stage}/${bin}"
+          cp LICENSE "${stage}/LICENSE"
+          tar -czf "dist/${bin}-${{ matrix.target }}.tar.gz" -C dist "${bin}-${{ matrix.target }}"
+          (cd dist && shasum -a 256 "${bin}-${{ matrix.target }}.tar.gz" > "${bin}-${{ matrix.target }}.tar.gz.sha256")
+
+      - name: Stage artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bin = "${env:SAPPHIRE_RELEASE_BIN}"
+          $stage = "dist/$bin-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/release/$bin.exe" "$stage/$bin.exe"
+          Copy-Item "LICENSE" "$stage/LICENSE"
+          $archive = "dist/$bin-${{ matrix.target }}.zip"
+          Compress-Archive -Path "$stage/*" -DestinationPath $archive -Force
+          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower()
+          "$hash  $bin-${{ matrix.target }}.zip" | Out-File -FilePath "$archive.sha256" -Encoding ascii
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sapphire-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.zip
+            dist/*.zip.sha256
+          if-no-files-found: error
+          retention-days: 14

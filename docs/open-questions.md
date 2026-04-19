@@ -213,7 +213,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ2 | Parser 戦略 | DECIDED | **手書き再帰下降 + Pratt 演算子**。2026-04-19 I4 着手時に確定。`chumsky` / `nom` / `lalrpop` はいずれも採らない。レイアウト解決を独立パスに分離してから再帰下降で受ける構成が、spec 02 §Layout の off-side rule・spec 05 の固定演算子表・L2 診断との接続のいずれとも整合する。却下理由および採用構成の詳細は `docs/impl/13-parser.md`。 |
 | I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
 | I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
-| I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。I2 時点では `ubuntu-latest` 単独で `check / fmt / clippy / test` を回す最小構成（`.github/workflows/ci.yml`）。macOS / Windows matrix は Track D（クロスコンパイル）で拡張。 |
+| I-OQ5 | CI プラットフォーム | DECIDED (2026-04-19, D2) | GitHub Actions 2 系統構成。(1) 日常 CI (`.github/workflows/ci.yml`)：`push` / `pull_request` 契機で `ubuntu-latest` 単独の `check / fmt / clippy / test` + runtime rspec を継続。(2) release-build (`.github/workflows/release-build.yml`, D2 新設)：`workflow_dispatch` / `push: tags: ['v*']` 契機で **5 platform** native runner matrix（`x86_64-unknown-linux-gnu` on `ubuntu-latest` / `aarch64-unknown-linux-gnu` on `ubuntu-24.04-arm` / `x86_64-apple-darwin` on `macos-13` / `aarch64-apple-darwin` on `macos-14` / `x86_64-pc-windows-msvc` on `windows-latest`）で `cargo build --release` の artifact を tar.gz / zip + sha256 として upload。詳細は `docs/impl/29-ci-cross-compile.md`。 |
 | I-OQ6 | `lsp-types` のバージョン pin | DECIDED | `tower-lsp` が引き込む版（現行 0.94.x）に追随し、workspace 側で明示 pin しない。2026-04-19 L1 着手時に決定。`07-lsp-stack.md` / `10-lsp-scaffold.md` 参照。 |
 | I-OQ7 | `tower-lsp` 本家 vs fork | DECIDED | 本家 0.20.x を採用。L1 スコープ（initialize / shutdown / textDocument sync）で不足はない。fork への切替は、L2 以降で本家未対応の capability が必要になった時点で再評価。2026-04-19 L1 着手時に決定。`07-lsp-stack.md` / `10-lsp-scaffold.md` 参照。 |
 | I-OQ8 | ロギング基盤 | DEFERRED-IMPL | `tracing` 推奨（コンパイラ本体 I2 と揃える）。代替は `log` + `env_logger`。I2 で確定。`07-lsp-stack.md` 参照。 |
@@ -227,7 +227,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ29 | 単一 gem vs 複数 gem 構成 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §2。(A) 単一 `sapphire` + native gem、(B) メタ gem + `sapphire-compiler` + `sapphire-runtime`、(C) runtime gem のみ + CLI は別経路、の 3 案。draft は (A) を推奨、移行パスとして (C) を初回限定で採りうる。D2 の cross build 試行結果と user 判断で確定。 |
 | I-OQ30 | rb-sys 方式 vs 素の Rust binary 同梱方式 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3。Sapphire CLI は Ruby から FFI しない独立バイナリのため、Ruby ABI に縛られる `rb-sys` / native extension 方式（方式 Y）は合わない。素朴な `exe/sapphire` 同梱 platform gem（方式 X）を draft 採用。native extension が必要になる将来（LSP を Ruby プロセスに embed する設計変更が入った等）があれば再訪。 |
 | I-OQ31 | バイナリ署名 / SBOM の範囲 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §6。gem の `--sign`、OIDC trusted publishers、sigstore 署名、`cargo auditable`、`cargo sbom` のどこまでを v0 で含めるか。draft は `--sign` 採用せず、trusted publisher で push、SBOM は D2 で判断。D3 着地前に確定。 |
-| I-OQ32 | Windows の first-class / best-effort 線引き | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3 / §6。x86_64-pc-windows-msvc は first-class、aarch64 は best-effort を draft。CI matrix に Windows を加えるタイミング（Wave 2b vs 2c）も含めて D2 で確定。 |
+| I-OQ32 | Windows の first-class / best-effort 線引き | DECIDED (2026-04-19, D2) | `docs/impl/12-packaging.md` §3 / §6、`docs/impl/29-ci-cross-compile.md`。**CI matrix：x86_64-pc-windows-msvc は first-class**（release-build.yml の matrix 入り、`windows-latest` native runner）。**aarch64-pc-windows-msvc は best-effort**（native arm64 Windows runner の一般提供前のため D2 matrix から除外。`cargo-zigbuild` による cross build の導入は M9 以降の拡張として保留）。gem の platform-native 配送（`x64-mingw-ucrt` 等）は I-OQ29 / I-OQ30 の決着と連動するため D3 まで引き続き DEFERRED-IMPL で残る。 |
 | I-OQ33 | CLI と runtime gem の version 一致ポリシー | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §5。draft は「major.minor 一致、patch はズレ可（`add_runtime_dependency "sapphire-runtime", "~> X.Y.0"`）」。起動時 version check の厳格さ（warning vs error）も合わせて D3 前に確定。 |
 | I-OQ34 | 同一行 block-opener の reference column 計算 | DEFERRED-IMPL | `let a = 1\n    b = 2\n  in a` のように `let` と最初の binding `a` が同一行にある場合、レイアウト解決は `a` の column を知らないと `b` を同一 statement として受けられない。現行実装は `resolve_with_source` がソースを受けて `column_of(byte_offset)` を都度計算する形。これは O(file_size) 的な最悪コストを持つ（現実的には無視できる）が、将来 LSP などインクリメンタル再解析をする場合は事前テーブル化を検討。代替は「ソースに依存せず `usize::MAX` を記録し next dedent で閉じる」挙動。これは `let a = 1 in a` のような 1 行 let では正しく動くが、multi-line 継続形（`let a = 1\n    b = 2`）では `;` が挿入されない。現実装は source を受け取れる場合は column を使い、受け取らない `resolve` 経由では MAX を使うハイブリッド。実装コンパイラ完成後の LSP 組み込み時に再評価。 |
 | I-OQ35 | `:=` Ruby 埋め込みの専用 TokenKind | DEFERRED-IMPL | 現行レキサは `:=` を `TokenKind::Op(":=")` として返し、パーサ側で文字列比較する。spec 02 §Reserved punctuation は `:=` を reserve しているので、専用の `TokenKind::ColonEquals` を追加した方が clean。追加は monotonic（既存コード破壊なし）なので I5 以降いつでも入れ替え可。今は lexer の変更を最小化した。 |
@@ -411,5 +411,13 @@ I6 完了後に扱う。
 VSCode 拡張の syntax / snippets / configuration 整備に伴い
 **I-OQ76〜I-OQ79** を §1.5 に追加。I-OQ78 は D3 前に、ほか 3 件は
 `DEFERRED-IMPL`。
+
+2026-04-19（D2 タスク、`docs/impl/29-ci-cross-compile.md`）で、
+platform matrix の release-build ワークフロー整備に伴い
+**I-OQ5**（CI プラットフォーム）を `DECIDED` に、**I-OQ32**
+（Windows first-class / best-effort）を CI matrix 側の決着分だけ
+`DECIDED` に更新した。gem の platform-native 配送は I-OQ29 /
+I-OQ30 / I-OQ31 と合わせて D3 で確定する。新規 OQ は発生せず
+（I-OQ101+ は予約のみ、未使用）。
 
 新しく OPEN が発生したらここで列挙する運用。
