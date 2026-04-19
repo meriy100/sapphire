@@ -37,3 +37,24 @@ jobs:
 
       - name: cargo test --all
         run: cargo test --all
+
+  runtime:
+    name: sapphire-runtime gem / rspec
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: runtime
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        # Matches runtime/sapphire-runtime.gemspec `required_ruby_version`.
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: runtime
+
+      - name: bundle exec rspec
+        run: bundle exec rspec
