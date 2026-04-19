@@ -125,24 +125,24 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 同時 worktree 数は 4〜5 を上限とする。エージェントは background で
 起動し、完了通知を待って main で順にレビュー・マージする。
 
-### ウェーブ 1（2026-04-19 開始）
+### ウェーブ 1（2026-04-19 開始）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i2-scaffold` | **I2** |
-| 2 | `impl/r1-runtime-scaffold` | **R1** |
-| 3 | `impl/s1-spec-cleanup` | **S1** |
-| 4 | `impl/l0-lsp-selection` | **L0** |
+| 1 | `impl/i2-scaffold` | **I2** 🟢 |
+| 2 | `impl/r1-runtime-scaffold` | **R1** 🟢 |
+| 3 | `impl/s1-spec-cleanup` | **S1** 🟢 |
+| 4 | `impl/l0-lsp-selection` | **L0** 🟢 |
 
-### ウェーブ 2（I2/R1/L0/S1 着地後）
+### ウェーブ 2（I2/R1/L0/S1 着地後）🟡 **進行中（2026-04-19〜）**
 
-| # | タスク |
-|---|---|
-| 1 | **I3** レキサ |
-| 2 | **R2** ADT helpers → **R3** Marshalling（順次） |
-| 3 | **L1** LSP protocol scaffold |
-| 4 | **T2a** tutorial ch5 |
-| 5 | **D1** gem packaging 調査 |
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i3-lexer` | **I3** レキサ 🟡 |
+| 2 | `impl/r2-r3-runtime` | **R2** ADT helpers → **R3** Marshalling（順次） 🟡 |
+| 3 | `impl/l1-lsp-scaffold` | **L1** LSP protocol scaffold 🟡 |
+| 4 | `impl/t2a-tutorial-ch5` | **T2a** tutorial ch5 🟡 |
+| 5 | `impl/d1-packaging` | **D1** gem packaging 調査 🟡 |
 
 ### ウェーブ 3（I3 着地後）
 

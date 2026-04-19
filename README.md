@@ -1,9 +1,10 @@
 # Sapphire
 
-Sapphire は Elm に触発された関数型言語で、コンパイラは `.sp` ソース
-を Ruby モジュール (`.rb`) へ翻訳する。特徴的な機能として、埋め込み
-Ruby スニペットを別スレッドで実行して純粋なパイプラインに結果を返
-す `Ruby` 評価モナドを備える（予定）。
+Sapphire は Haskell 並の表現力（型クラス + higher-kinded types）を
+目指す関数型言語で、コンパイラは `.sp` ソースを Ruby モジュール
+(`.rb`) へ翻訳する。特徴的な機能として、埋め込み Ruby スニペットを
+別スレッドで実行して純粋なパイプラインに結果を返す **作用モナド
+**（effect monad、型 `Ruby a`）を備える（実装中）。
 
 本リポジトリは **実装フェーズ**（2026-04-19 開始）にあり、コンパイラ
 本体を Rust で、ランタイム gem を Ruby で実装していく。
@@ -27,9 +28,10 @@ Ruby スニペットを別スレッドで実行して純粋なパイプライン
 - `crates/sapphire-core/` — コンパイラと LSP が共有する型。
 - `crates/sapphire-compiler/` — コンパイラ本体（CLI バイナリ予定）。
 - `crates/sapphire-lsp/` — Language Server 実装。
-- `runtime/` — `sapphire-runtime` gem（Ruby）の置き場（R1 以降で
-  populate）。
-- `editor/` — VSCode extension（L7 で populate）。
+- `runtime/` — `sapphire-runtime` gem（Ruby）。
+- `editors/vscode/` — VSCode extension（L1 以降で populate）。
+- `examples/` — 動作確認用の実装サンプル（各トラックのマイル
+  ストーン達成ごとにサブディレクトリが増える）。
 
 ## 開発環境
 
@@ -52,4 +54,4 @@ CI（`.github/workflows/ci.yml`）でも同じコマンドが走る。
 ## ライセンス
 
 MIT（`LICENSE` 参照）。Rust 生態系慣例の dual-license（`MIT OR
-Apache-2.0`）への移行は `docs/open-questions.md` I-OQ6 で追跡中。
+Apache-2.0`）への移行は `docs/open-questions.md` I-OQ11 で追跡中。
