@@ -68,10 +68,10 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | **I6a** | HM 中核型推論（spec 01） | I4 |
 | **I6b** | ADT + レコード（spec 03/04） | I6a |
 | **I6c** | 型クラス + MTC（spec 07） | I6b |
-| **I7a** | Codegen 中核：式 → Ruby | I6a |
-| **I7b** | Codegen ADT/レコード → タグ付きハッシュ（spec 10） | I6b, R2 |
-| **I7c** | Codegen `Ruby` monad（spec 11） | I6c, R4 |
-| **I8** | CLI（`build / run / check`、`sapphire.yml`） | I7c |
+| **I7a** | Codegen 中核：式 → Ruby 🟢 | I6a |
+| **I7b** | Codegen ADT/レコード → タグ付きハッシュ（spec 10）🟢 | I6b, R2 |
+| **I7c** | Codegen `Ruby` monad（spec 11）🟢 | I6c, R4 |
+| **I8** | CLI（`build / run / check`、`sapphire.yml`）🟢 | I7c |
 | **I9** | M9 例題 4 本の end-to-end 通し | I8, R6 |
 
 ### Track R (6 task)
@@ -180,7 +180,7 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i7-i8-codegen-cli` | **I7** codegen（式→Ruby / ADT / 作用モナド）→ **I8** CLI 🟡 |
+| 1 | `impl/i7-i8-codegen-cli` | **I7** codegen（式→Ruby / ADT / 作用モナド）→ **I8** CLI 🟢 |
 | 2 | `impl/l4-hover` | **L4** hover（型情報） 🟡 |
 | 3 | `impl/d2-ci-cross` | **D2** CI cross-compile matrix 🟡 |
 

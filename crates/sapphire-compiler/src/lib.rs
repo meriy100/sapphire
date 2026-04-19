@@ -30,6 +30,7 @@
 //!   success) and the single first error (on failure).
 
 pub mod analyze;
+pub mod codegen;
 pub mod error;
 pub mod layout;
 pub mod lexer;
