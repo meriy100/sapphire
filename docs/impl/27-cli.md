@@ -52,6 +52,15 @@ Status: **draft**（I8 と同時に着地）。build 04 §CLI 契約の
   ればエラー
 - 終了コードは Ruby subprocess の exit code をそのまま返す
 
+entry module 名が dotted（例 `App.Main`）のとき、CLI は Sapphire
+側の dotted 名を Ruby の nested class path（`App::Main`）に変換し
+てから `Sapphire::App::Main.run_main` の形で呼び出す。セグメント
+ごとの case は保持する（Ruby の定数名は case-sensitive、生成
+コードも PascalCase の `module App / class Main` で emit するた
+め）。この変換はソースパスに対する snake_case 変換（`sapphire/
+app/main.rb`）とは独立で、`sapphire.rs` の `ruby_class_path` /
+`module_rb_path` が別々に扱う。
+
 ### `--version`
 
 `sapphire 0.0.0` と出力（workspace.package.version を参照）。

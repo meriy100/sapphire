@@ -142,6 +142,34 @@ gem は prelude を提供しない（CLAUDE.md の制約：runtime は変更禁
 止）。I8 CLI は各 build で `Sapphire::Prelude` を 1 ファイル
 `sapphire_prelude.rb` として emit する。
 
+## File header
+
+生成される各 `.rb` は build 02 §File-content shape を満たす必要が
+ある。すなわち：
+
+1. 生成元モジュールを identify する行（`Generated from module …`）
+2. コンパイラのバージョンを identify する行
+3. runtime gem の version constraint と `Sapphire::Runtime.
+   require_version!('~> 0.1')` 呼び出し
+4. `require 'sapphire/runtime'`（runtime 直 require）と
+   `require 'sapphire/prelude'`（prelude 直 require）の両方
+5. import 先モジュールの `require 'sapphire/<snake_case_path>'`
+
+`RUNTIME_VERSION_CONSTRAINT` は `crates/sapphire-compiler/src/
+codegen/mod.rs` に pessimistic 形式（`~> MAJOR.MINOR`）で定数化し、
+runtime gem の `lib/sapphire/runtime/version.rb` と連動させて bump
+する。自動生成の余地は I-OQ85 予約。
+
+## `>>` と thunk
+
+`m >> n` の codegen は `n` を zero-arg lambda（thunk）で包んで
+`Sapphire::Prelude.monad_then` に渡す。short-circuit する monad
+（`Err _` / `Nothing`）で `n` を eager 評価しないため。`monad_then`
+は第 2 引数が callable zero-arg であることを契約とし、LHS が continue
+するときのみ thunk を force する。この契約は prelude template と
+codegen `render_binop` / `runtime::prelude_value(">>")` の 3 箇所で
+対称に維持する。
+
 ## Do 記法の扱い
 
 `Expr::Do` は codegen 段でその場で `>>=` 連鎖に展開する（I-OQ58 の

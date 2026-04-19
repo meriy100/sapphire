@@ -223,7 +223,11 @@ fn run_run(args: &[String]) -> ExitCode {
     // set; otherwise trust the env var.
     let runtime_lib = runtime_lib_path();
     let rb_entry_path = module_rb_path(&entry_module);
-    let ruby_code = format!("require '{rb_entry_path}'; exit Sapphire::{entry_module}.run_main");
+    // The Sapphire dotted module name (e.g. `Data.List`) becomes the
+    // Ruby nested-class path `Sapphire::Data::List`. Each PascalCase
+    // segment is preserved — only the separator changes.
+    let ruby_class_path = ruby_class_path(&entry_module);
+    let ruby_code = format!("require '{rb_entry_path}'; exit Sapphire::{ruby_class_path}.run_main");
 
     let status = Command::new("ruby")
         .arg("-I")
@@ -350,6 +354,16 @@ fn module_rb_path(dotted: &str) -> String {
     format!("sapphire/{}", segs.join("/"))
 }
 
+/// Convert a dotted Sapphire module name (e.g. `Data.List.Extra`) into
+/// the Ruby nested-class path used inside `Sapphire::...` (e.g.
+/// `Data::List::Extra`). Segment case is preserved — only the dot
+/// separator becomes `::`. Without this, a multi-segment entry module
+/// would round-trip through `format!` as `Sapphire::Data.List.run_main`,
+/// which Ruby parses as a method chain on a constant and then fails.
+fn ruby_class_path(dotted: &str) -> String {
+    dotted.replace('.', "::")
+}
+
 fn to_snake(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for (i, ch) in s.chars().enumerate() {
@@ -380,4 +394,42 @@ fn runtime_lib_path() -> PathBuf {
         dir = d.parent();
     }
     PathBuf::from("runtime/lib")
+}
+
+// ---------------------------------------------------------------------
+//  Unit tests for the pure helpers
+// ---------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ruby_class_path_single_segment_passthrough() {
+        assert_eq!(ruby_class_path("Main"), "Main");
+    }
+
+    #[test]
+    fn ruby_class_path_multi_segment_uses_colons() {
+        // Must-fix regression: a dotted module name must become a
+        // `::`-separated Ruby constant path, not a `.`-chain that Ruby
+        // would parse as a method call on `Sapphire::Data`.
+        assert_eq!(ruby_class_path("Data.List"), "Data::List");
+        assert_eq!(ruby_class_path("App.Main.Entry"), "App::Main::Entry");
+    }
+
+    #[test]
+    fn ruby_class_path_preserves_pascal_case() {
+        // Each segment must keep its PascalCase form. Ruby constants
+        // are case-sensitive and lowercase segments would no longer
+        // match the `class`/`module` names emitted by the codegen.
+        assert_eq!(ruby_class_path("FooBar.Baz"), "FooBar::Baz");
+    }
+
+    #[test]
+    fn module_rb_path_multi_segment_uses_snake_case() {
+        assert_eq!(module_rb_path("Main"), "sapphire/main");
+        assert_eq!(module_rb_path("Data.List"), "sapphire/data/list");
+        assert_eq!(module_rb_path("HTTPServer"), "sapphire/h_t_t_p_server");
+    }
 }

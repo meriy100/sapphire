@@ -98,8 +98,14 @@ module Sapphire
       end
     end
 
-    def self.monad_then(m, n)
-      monad_bind(m, ->(_) { n })
+    # `m >> n` — sequential composition that discards the result of
+    # `m`. Codegen always wraps `n` in a zero-arg thunk (a `-> { ... }`
+    # lambda) so that short-circuiting monads (`Err _`, `Nothing`)
+    # never force `n`. The `monad_then` contract is therefore: the
+    # second argument is always callable with no arguments and the
+    # thunk is forced only when the LHS admits continuation.
+    def self.monad_then(m, thunk)
+      monad_bind(m, ->(_) { thunk.call })
     end
 
     # ---- pure fall-back ------------------------------------------

@@ -71,16 +71,21 @@ do { e; rest }                  = e >> do { rest }
 を採る：
 
 - `>>=` / `>>` は `Sapphire::Prelude.monad_bind(m, k)` / `monad_then
-  (m, n)` に翻訳。runtime 側は `m` の shape で分岐：
+  (m, thunk)` に翻訳。`>>` の第 2 引数は必ず zero-arg lambda
+  （`-> { n }`）にする。LHS が `Err _` / `Nothing` 等で短絡する
+  monad では thunk が force されず、`n` が評価されない。`monad_then`
+  の Ruby 側契約は「第 2 引数は callable zero-arg」に fix されて
+  いる。runtime 側は `m` の shape で分岐：
   - `Sapphire::Runtime::Ruby::Action` → `prim_bind(m, &k)`
   - `{ tag: :Ok, values: [v] }` → `k.call(v)`
   - `{ tag: :Err, values: [_] }` → `m`（短絡）
   - `{ tag: :Just, values: [v] }` → `k.call(v)`
   - `{ tag: :Nothing, values: [] }` → `m`
   - それ以外 → raise `Sapphire::Runtime::Errors::BoundaryError`
-- `pure` は**呼び出し側の関数の型情報に依存**。I6 の `TypedProgram`
-  を codegen に渡し、各 top-level binding の return-type head を見
-  て `pure` を次のいずれかに解決する：
+- `pure` は **enclosing top-level binding の return-type head** に
+  依存（`do` block 単位ではない — I-OQ82 参照）。I6 の
+  `TypedProgram` を codegen に渡し、各 top-level binding の
+  return-type head を見て `pure` を次のいずれかに解決する：
   - head が `Ruby` → `Sapphire::Runtime::Ruby.prim_return(x)`
   - head が `Result` → `{ tag: :Ok, values: [x] }`
   - head が `Maybe` → `{ tag: :Just, values: [x] }`

@@ -294,6 +294,44 @@ fn lambda_emits_curried_ruby_lambda() {
 }
 
 #[test]
+fn lambda_with_constructor_pattern_destructures_real_scrutinee() {
+    // Regression test for must-fix 2: a non-trivial lambda parameter
+    // (e.g. `\(Just x) -> x`) used to emit `case ; in ...; end;` with
+    // no scrutinee, which silently failed to bind `x`. The fixed
+    // output must feed the real argument as the scrutinee.
+    let out = run_gen(
+        "\
+module M where
+f : Maybe Int -> Int
+f = \\(Just x) -> x
+",
+    );
+    // The fresh argument name is `_arg0`; the destructure block must
+    // read the real scrutinee, not an empty one.
+    assert!(
+        out.contains("case _arg0; in"),
+        "expected `case _arg0; in ...; end;` destructure, got: {out}"
+    );
+    // And the bound variable must show up in the body.
+    assert!(out.contains("tag: :Just"));
+}
+
+#[test]
+fn lambda_with_cons_pattern_destructures_real_scrutinee() {
+    let out = run_gen(
+        "\
+module M where
+f : List Int -> Int
+f = \\(x :: _) -> x
+",
+    );
+    assert!(
+        out.contains("case _arg0; in"),
+        "expected `case _arg0; in ...; end;` destructure, got: {out}"
+    );
+}
+
+#[test]
 fn let_emits_iife_style() {
     let out = run_gen(
         "\
@@ -521,6 +559,12 @@ f = pure 3
 
 #[test]
 fn ruby_main_emits_run_main_helper() {
+    // The generator emits `self.run_main` only for a module that
+    // declares `main : Ruby τ`. The `has_ruby_main` detector keys
+    // off the `Ruby` head of the signature's return type (via the
+    // AST signature first, then the typed scheme as fallback) — so
+    // this module deliberately writes the signature `main : Ruby {}`
+    // so the AST branch fires even before typeck hands us a scheme.
     let out = run_gen(
         "\
 module Main where

@@ -23,12 +23,32 @@ use sapphire_compiler::resolver::resolve_program;
 use sapphire_compiler::typeck::check_program;
 use sapphire_core::ast::Module as AstModule;
 
+/// Check for a working Ruby interpreter. The M9 end-to-end tests
+/// require Ruby 3.3 per `docs/impl/08-runtime-layout.md` (and CI runs
+/// against `ubuntu-latest` which ships 3.3). Tests skip cleanly when
+/// `SAPPHIRE_SKIP_RUBY_TESTS=1` is set; otherwise absence of Ruby is
+/// treated as a failure, so a misconfigured machine cannot pretend to
+/// have run the suite.
 fn ruby_available() -> bool {
     Command::new("ruby")
         .arg("--version")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
+}
+
+fn require_ruby_or_skip() -> bool {
+    if ruby_available() {
+        return true;
+    }
+    if env::var("SAPPHIRE_SKIP_RUBY_TESTS").as_deref() == Ok("1") {
+        eprintln!("skipping: SAPPHIRE_SKIP_RUBY_TESTS=1 and ruby not on PATH");
+        return false;
+    }
+    panic!(
+        "ruby 3.3 is not available on PATH; set SAPPHIRE_SKIP_RUBY_TESTS=1 to opt out of \
+         the M9 end-to-end suite"
+    );
 }
 
 fn workspace_root() -> std::path::PathBuf {
@@ -90,8 +110,7 @@ fn out_dir_for(name: &str) -> std::path::PathBuf {
 
 #[test]
 fn example_01_hello_ruby_runs_end_to_end() {
-    if !ruby_available() {
-        eprintln!("skipping: ruby not on PATH");
+    if !require_ruby_or_skip() {
         return;
     }
     let root = workspace_root();
@@ -107,8 +126,7 @@ fn example_01_hello_ruby_runs_end_to_end() {
 
 #[test]
 fn example_02_parse_numbers_runs_end_to_end() {
-    if !ruby_available() {
-        eprintln!("skipping: ruby not on PATH");
+    if !require_ruby_or_skip() {
         return;
     }
     let root = workspace_root();
@@ -146,8 +164,7 @@ fn example_02_parse_numbers_runs_end_to_end() {
 
 #[test]
 fn example_03_students_records_topscorers_spot_check() {
-    if !ruby_available() {
-        eprintln!("skipping: ruby not on PATH");
+    if !require_ruby_or_skip() {
         return;
     }
     let root = workspace_root();
@@ -179,8 +196,7 @@ exit 0
 
 #[test]
 fn example_04_fetch_runs_with_network_stub() {
-    if !ruby_available() {
-        eprintln!("skipping: ruby not on PATH");
+    if !require_ruby_or_skip() {
         return;
     }
     let root = workspace_root();

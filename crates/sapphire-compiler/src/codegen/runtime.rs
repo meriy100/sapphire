@@ -119,8 +119,13 @@ pub fn prelude_value(name: &str) -> Option<String> {
 
         // Monad class methods that have a specialised dispatch
         // helper in the prelude file.
+        //
+        // The value-position `>>` wraps `n` in a zero-arg thunk so
+        // that `monad_then` can defer its evaluation when `m` would
+        // short-circuit. This matches the BinOp emission above (see
+        // `render_binop`); keep them in sync.
         ">>=" => "->(m) { ->(k) { Sapphire::Prelude.monad_bind(m, k) } }",
-        ">>" => "->(m) { ->(n) { Sapphire::Prelude.monad_then(m, n) } }",
+        ">>" => "->(m) { ->(n) { Sapphire::Prelude.monad_then(m, -> { n }) } }",
 
         // `pure` / `return` in value position fall back to the
         // polymorphic stub; the generator specialises direct calls

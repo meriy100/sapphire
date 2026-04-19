@@ -50,6 +50,18 @@ mod runtime;
 #[cfg(test)]
 mod tests;
 
+/// The compiler version embedded into generated file headers. Mirrors
+/// `--version` output.
+pub(crate) const SAPPHIRE_COMPILER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// The runtime-gem version constraint baked into every generated
+/// module's header. Held in a single place so that a bump to the
+/// runtime's major/minor version only has to change this constant and
+/// the gemspec's `VERSION`. The `~>` (pessimistic) form matches build
+/// 03's semver policy: minor-compatible runtimes are admitted, major
+/// bumps require regenerated code.
+pub(crate) const RUNTIME_VERSION_CONSTRAINT: &str = "~> 0.1";
+
 /// A single Ruby file to be written at `path`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedFile {

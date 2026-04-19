@@ -212,17 +212,30 @@ fn render_app(func: &Expr, arg: &Expr, ctx: &ExprCtx) -> String {
         return render_ctor_call(&ctor_name, &args, ctx);
     }
 
-    // Detect `pure x` / `return x` that can be specialised.
+    // Detect `pure x` / `return x` that can be specialised. We must
+    // not rewrite a user-bound `pure` / `return` local (e.g. a
+    // function parameter shadowing the prelude), so the outer guard
+    // is `!is_local`; the remaining decision is whether the reference
+    // resolved to `Prelude.pure` / `Prelude.return` or to something
+    // else entirely (a user binding in another module with the same
+    // name — unusual but legal). In the "something else entirely"
+    // case we fall through to the ordinary curried call below rather
+    // than substitute a specialised form.
     if let Expr::Var { name, span, .. } = func {
         if (name == "pure" || name == "return") && !ctx.is_local(*span, name) {
-            // Confirm this is the prelude reference (not a shadowed
-            // local with the same name that the resolver might have
-            // routed to a local binding).
-            if matches!(
+            let resolves_to_prelude = matches!(
                 ctx.module.references.get(span),
-                Some(Resolution::Global(r)) if r.module.segments.len() == 1 && r.module.segments[0] == "Prelude"
-            ) || !ctx.is_local(*span, name)
-            {
+                Some(Resolution::Global(r))
+                    if r.module.segments.len() == 1 && r.module.segments[0] == "Prelude"
+            );
+            // When the reference table is missing this span (rare —
+            // only for synthesised nodes like do-desugar lambdas that
+            // reach here through variable renames), we still want to
+            // specialise, since nothing else can legitimately own a
+            // non-local `pure` / `return` without going through the
+            // prelude.
+            let has_no_resolution = !ctx.module.references.contains_key(span);
+            if resolves_to_prelude || has_no_resolution {
                 let template = runtime::specialised_pure(ctx.return_head);
                 let arg_src = render_expr(arg, ctx);
                 return template.replace("{}", &arg_src);
@@ -288,11 +301,22 @@ fn collect_ctor_app<'a>(func: &'a Expr, arg: &'a Expr) -> Option<(String, Vec<&'
 }
 
 fn render_lambda(params: &[Pattern], body: &Expr, ctx: &ExprCtx) -> String {
-    // Collect parameter names. Non-trivial patterns are bound via an
-    // inner case-destructure; for M9 all lambda params happen to be
-    // plain Vars or Wildcards.
+    // Collect parameter names and track which patterns need
+    // destructuring. Non-trivial patterns — anything other than a
+    // plain `Var` or `Wildcard` — are bound to a fresh `_argN` name
+    // and then destructured on entry to the body via `case _argN in
+    // pat end`.
+    //
+    // An earlier version emitted `case ; in pat; end;` (no
+    // scrutinee), which Ruby accepts syntactically but never actually
+    // binds pattern variables, so later references to those names
+    // raised `NameError`. The fix is to feed the real argument as
+    // the scrutinee. This path is not exercised by M9 but is
+    // required for e.g. `\(Just x) -> x` and is covered by tests
+    // below. See must-fix item 2 on the I7 codegen review.
     let mut new_locals: Vec<String> = Vec::new();
     let mut param_names: Vec<String> = Vec::new();
+    let mut destructure_indices: Vec<usize> = Vec::new();
     for (i, p) in params.iter().enumerate() {
         match p {
             Pattern::Var { name, .. } => {
@@ -307,33 +331,32 @@ fn render_lambda(params: &[Pattern], body: &Expr, ctx: &ExprCtx) -> String {
                 // the body's entry via case/in.
                 let fresh = format!("_arg{i}");
                 param_names.push(fresh);
+                destructure_indices.push(i);
+                // Pull every name bound by the pattern into the
+                // local set so the body's references resolve to the
+                // destructured bindings rather than escaping to the
+                // prelude or to a global.
+                for n in collect_binders(&params[i]) {
+                    new_locals.push(n);
+                }
             }
         }
     }
     let inner_ctx = ctx.with_locals(new_locals);
 
-    // Destructure any non-trivial patterns by prepending a `case` in
-    // the body. For M9 this branch is rarely taken; we still handle
-    // it so the generator is complete.
-    let mut destructure_bindings: Vec<String> = Vec::new();
-    for (i, p) in params.iter().enumerate() {
-        match p {
-            Pattern::Var { .. } | Pattern::Wildcard(_) => {}
-            _ => {
-                let fresh = &param_names[i];
-                let pat = render_pattern(p);
-                destructure_bindings.push(format!("{fresh} => {pat}"));
-            }
-        }
-    }
-
     let body_src = render_expr(body, &inner_ctx);
-    let core = if destructure_bindings.is_empty() {
+    let core = if destructure_indices.is_empty() {
         body_src
     } else {
         let mut s = String::new();
-        for db in &destructure_bindings {
-            s.push_str(&format!("case ; in {db}; end; "));
+        for i in &destructure_indices {
+            let fresh = &param_names[*i];
+            let pat = render_pattern(&params[*i]);
+            // `case <scrutinee>; in <pat>; end` binds any variables
+            // named in `pat` into the enclosing Ruby scope. The
+            // trailing `;` separates the destructure from the body
+            // expression that follows.
+            s.push_str(&format!("case {fresh}; in {pat}; end; "));
         }
         s.push_str(&body_src);
         s
@@ -431,8 +454,13 @@ fn render_binop(op: &str, left: &Expr, right: &Expr, ctx: &ExprCtx) -> String {
         );
     }
     if op == ">>" {
+        // `m >> n` discards the result of `m` but must **not** evaluate
+        // `n` when `m` short-circuits (e.g. `Err _` in the Result
+        // monad or a failed `Ruby` action). We thunk the RHS through a
+        // zero-arg lambda; `monad_then` in the prelude calls it only
+        // when the LHS would have continued.
         return format!(
-            "Sapphire::Prelude.monad_then(({}), ({}))",
+            "Sapphire::Prelude.monad_then(({}), -> {{ ({}) }})",
             render_expr(left, ctx),
             render_expr(right, ctx)
         );
