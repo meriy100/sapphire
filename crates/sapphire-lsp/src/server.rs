@@ -33,15 +33,17 @@
 use dashmap::DashMap;
 use sapphire_compiler::analyze::{AnalysisResult, analyze};
 use sapphire_compiler::error::CompileError;
+use sapphire_compiler::resolver::resolve;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
     Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, ServerCapabilities,
-    ServerInfo, TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind,
-    Url,
+    GotoDefinitionParams, GotoDefinitionResponse, InitializeParams, InitializeResult,
+    InitializedParams, Location, MessageType, OneOf, Position, ServerCapabilities, ServerInfo,
+    TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, LanguageServer};
 
+use crate::definition::find_definition;
 use crate::diagnostics::{build_line_map, compile_error_to_diagnostic};
 use crate::edit::{ApplyError, apply_change};
 
@@ -92,6 +94,12 @@ impl SapphireLanguageServer {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::INCREMENTAL,
                 )),
+                // L5: advertise `textDocument/definition` support.
+                // We return a `Location` (single site) rather than a
+                // `LocationLink` array for now; see
+                // `docs/impl/22-lsp-goto-definition.md` for the
+                // rationale.
+                definition_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -99,6 +107,37 @@ impl SapphireLanguageServer {
                 version: Some(env!("CARGO_PKG_VERSION").to_owned()),
             }),
         }
+    }
+
+    /// Resolve a `(uri, position)` pair into a same-file definition
+    /// site, if any. Exposed as a pure `&self` helper so tests can
+    /// exercise the lookup without spinning up a real LSP client.
+    ///
+    /// Returns `None` when the document is not in the store, when
+    /// `analyze` fails, when the resolver fails to produce a module
+    /// env, when the position does not rest on a reference site, or
+    /// when the reference resolves to a definition outside the
+    /// current file (see `docs/impl/22-lsp-goto-definition.md`
+    /// §Scope).
+    pub fn resolve_position_to_location(&self, uri: &Url, position: Position) -> Option<Location> {
+        let text = self.documents.get(uri).map(|e| e.text.clone())?;
+        let analysis = analyze(&text);
+        let module = analysis.module?;
+        // The resolver may fail on this snapshot (e.g. an unrelated
+        // unresolved name elsewhere in the file). When it does, we
+        // drop goto rather than risk returning a bogus span — the
+        // reference side table is the authoritative source, and we
+        // lose it if `resolve` errors. A future enhancement could
+        // keep partial reference information across resolve errors
+        // (tracked in the design note); today we fall back to `None`.
+        let resolved = resolve(module.clone()).ok()?;
+        let line_map = build_line_map(&text);
+        let byte_offset = line_map.byte_offset(position)?;
+        let range = find_definition(&module, &resolved, &text, byte_offset, &line_map)?;
+        Some(Location {
+            uri: uri.clone(),
+            range,
+        })
     }
 
     /// Run the front-end pipeline over `text` and project the
@@ -312,6 +351,28 @@ impl LanguageServer for SapphireLanguageServer {
         // Clear any lingering diagnostics so the client doesn't keep
         // stale squiggles when the buffer is closed.
         self.client.publish_diagnostics(uri, Vec::new(), None).await;
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let uri = params
+            .text_document_position_params
+            .text_document
+            .uri
+            .clone();
+        let position = params.text_document_position_params.position;
+        tracing::trace!(
+            uri = %uri,
+            line = position.line,
+            character = position.character,
+            "textDocument/definition",
+        );
+        let Some(location) = self.resolve_position_to_location(&uri, position) else {
+            return Ok(None);
+        };
+        Ok(Some(GotoDefinitionResponse::Scalar(location)))
     }
 }
 
