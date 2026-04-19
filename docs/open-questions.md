@@ -319,6 +319,7 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 | T-05-2 | 章 5 | HKT (`Functor f` の `f`) で読者が詰まる | DECIDED | 同上（C）。HKT の概念導入は発展篇に隔離する方向で tutorial 改訂する。 |
 | T-05-3 | 章 5 (型クラス) | `Maybe a → Result e a` のブリッジ関数（`maybeToResult : e -> Maybe a -> Maybe` 相当）が prelude にないので `Result` の `do` 例で手書き変換（`case readInt s of Just n -> Ok n; Nothing -> Err ...`）が入る | WATCHING | 2026-04-19 T2a 章 5 書き直し中に発見。`maybeToResult` / `fromMaybe' : e -> Maybe a -> Result e a` のようなユーティリティを 09 prelude に追加する余地あり。M9 例題で頻出するようなら 09 に正式追加を検討。 |
 | T-06-1 | 章 6 (Ruby monad) | `Monad` の比喩が `Maybe`/`Result` と `Ruby` で別物になり摩擦 | DECIDED | 同上（C）。11 の意味論は触らず、tutorial での `do` 脱糖説明を強化する方向で T2 対応。 |
+| T-06-2 | 章 6 (Ruby monad) | `Just nil` / `Nothing` を区別するため `nil` を使わない規約が、Ruby 利用者の慣用と逆行しうる。Ruby スニペットを書くとき `Maybe a` の返し方を間違えやすい | WATCHING | 2026-04-19 T2b 章 6 書き直し中に発見。規範は 10 §ADTs のまま（10-OQ1 は DECIDED「近道採らない」）。tutorial 側の注意喚起で賄えるか、M9 例題で頻出する `Maybe a` 返しの書き方ガイドを 09 / 10 の非規範メモに足すかは、例題の手触りで判断。 |
 | T-02..06 | 全般 | `仕様への気付き` 節を持つ章が 5 本 | WATCHING | チュートリアルが改訂されるたびに気付きをここへ集約する運用。 |
 
 ---
