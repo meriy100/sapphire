@@ -65,10 +65,12 @@ I5 の reference side table と I6 の `HashMap<String, Scheme>`
   `_(prelude)_`
 - **Prelude operator** — `++`。
   ```
-  (++) : forall a. List a -> List a -> List a
+  ++ : String -> String -> String
   ```
   `_(prelude)_`（演算子は `name : scheme` の name として symbol 文字
-  そのまま、Haskell の section 記法との混同を避けるため括弧は付けない）
+  そのまま、Haskell の section 記法との混同を避けるため括弧は付けない。
+  `++` は spec 09 では String 連結として登録されており、List 連結は
+  現段階では prelude に含まれない）
 - **Data type / type alias** — `T`, `Age` のような型名。型位置で
   hover すると `(data type)` / `(type alias)` のタグが付く。
   スキームは型側のため表示しない。
