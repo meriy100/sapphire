@@ -98,10 +98,33 @@ impl SapphireLanguageServer {
 
     /// Update the document store and publish the resulting
     /// diagnostics. Called from `did_open` / `did_change`.
+    ///
+    /// Order of operations is important: we insert into the document
+    /// store **before** running analysis so a concurrent `did_change`
+    /// cannot write back an older version on top of ours. We also
+    /// check the stored version before publishing — if a newer change
+    /// arrived while we were parsing, drop the stale diagnostics and
+    /// let the newer `refresh` call publish its own.
     async fn refresh(&self, uri: Url, text: String, version: i32) {
+        self.documents.insert(
+            uri.clone(),
+            Document {
+                text: text.clone(),
+                version,
+            },
+        );
         let diagnostics = Self::diagnostics_for(&text);
-        self.documents
-            .insert(uri.clone(), Document { text, version });
+        let still_current = self
+            .documents
+            .get(&uri)
+            .map(|entry| entry.version == version)
+            .unwrap_or(false);
+        if !still_current {
+            // A newer change landed during analysis; skip publishing
+            // these diagnostics — the newer refresh will publish its
+            // own, and LSP requires the latest to win.
+            return;
+        }
         self.client
             .publish_diagnostics(uri, diagnostics, Some(version))
             .await;

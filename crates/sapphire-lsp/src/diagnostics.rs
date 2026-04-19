@@ -71,15 +71,27 @@ impl<'a> LineMap<'a> {
     /// measured in UTF-16 code units per LSP defaults.
     pub fn position(&self, byte: usize) -> Position {
         let byte = byte.min(self.source.len());
+        // Snap `byte` onto the nearest preceding char boundary so
+        // slicing never fails silently. Lexer-produced spans always
+        // land on char boundaries; this guard only matters for
+        // synthetic spans or future span merges. Without it, a
+        // mid-char byte would fall through `from_utf8(...).unwrap_or("")`
+        // and silently report character=0 for the line.
+        let mut byte = byte;
+        while byte > 0 && !self.source.is_char_boundary(byte) {
+            byte -= 1;
+        }
         // Binary search: find the greatest line_starts[i] <= byte.
         let line_idx = match self.line_starts.binary_search(&byte) {
             Ok(i) => i,
             Err(i) => i - 1,
         };
         let line_start = self.line_starts[line_idx];
-        // Count UTF-16 code units from line_start up to byte.
-        let line_prefix = &self.source.as_bytes()[line_start..byte];
-        let character = utf16_len(std::str::from_utf8(line_prefix).unwrap_or(""));
+        // `byte` is on a char boundary and line_start is always on
+        // one (it's either 0 or the byte after '\n'), so this slice
+        // is guaranteed to be valid UTF-8.
+        let line_prefix = &self.source[line_start..byte];
+        let character = utf16_len(line_prefix);
         Position {
             line: line_idx as u32,
             character: character as u32,
