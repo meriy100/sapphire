@@ -176,21 +176,21 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 2 | `impl/l7-vscode-polish` | **L7** VSCode extension 拡充 🟢 |
 | 3 | `impl/rp-runtime-polish` | **RP** R4/R5 reviewer suggestion 束ね適用 🟢 |
 
-### ウェーブ 6（I6 着地後）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 6（I6 着地後）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
 | 1 | `impl/i7-i8-codegen-cli` | **I7** codegen（式→Ruby / ADT / 作用モナド）→ **I8** CLI 🟢 |
-| 2 | `impl/l4-hover` | **L4** hover（型情報） 🟡 |
-| 3 | `impl/d2-ci-cross` | **D2** CI cross-compile matrix 🟡 |
+| 2 | `impl/l4-hover` | **L4** hover（型情報） 🟢 |
+| 3 | `impl/d2-ci-cross` | **D2** CI cross-compile matrix 🟢 |
 
-### ウェーブ 7（I7 + R6 着地後、統合）⬜ **未着手**
+### ウェーブ 7（I7 + R6 着地後、統合）🟡 **進行中（2026-04-19〜）**
 
-| # | タスク |
-|---|---|
-| 1 | **I9** M9 end-to-end |
-| 2 | **L6** completion |
-| 3 | **D3** 初回リリース |
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i9-m9-finalize` | **I9** M9 end-to-end 最終審査 + 完成宣言 🟡 |
+| 2 | `impl/l6-completion` | **L6** completion 🟡 |
+| 3 | `impl/d3-release-prep` | **D3** 初回リリース準備（CHANGELOG / Release note / tag 準備まで、実 publish は user 判断） 🟡 |
 
 （L5 / L7 / T2c は先行着地済。）
 
