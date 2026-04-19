@@ -278,6 +278,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ98 | Prelude binding の docstring | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §今後の拡張。`install_prelude` は現状 scheme しか持たない。I-OQ44（Prelude の `.sp` 化）と合わせて doc comment を load し、hover Markdown の 2 段目に表示する。 |
 | I-OQ99 | Type-position hover の挙動 | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §新規 OQ。type variable（`a`, `b` …）や `forall` 量化子位置での hover が name-only になっている。L5 goto の I-OQ75 と paired。I6 が forall / 暗黙 quantifier の束縛位置を固めた段階で両方を拡張する。 |
 | I-OQ100 | `HoverTypes` の projection 戦略 | DEFERRED-IMPL | `docs/impl/28-lsp-hover.md` §`HoverTypes` の shape。現状は `inferred` / `ctors` / `globals` を 3 projection clone する。I6 が新 side table を追加するたびに `HoverTypes` を広げる圧がかかる。projection を続けるか LSP セッション全体で `Arc<InferCtx>` 相当を抱える形に切り替えるかを、I-OQ57（typed AST の持ち方）着地時に決める。 |
+| I-OQ106 | Completion trigger character の拡張 | DEFERRED-IMPL | `docs/impl/31-lsp-completion.md` §trigger character。L6 は `trigger_characters = ["."]` のみ宣言した（英数字入力は LSP の既定で client 側が自動発火するため）。`_` や `'` は client 差が大きく、現状は追加していない。実運用で「identifier 2 文字目を打つまで popup が出ない」等の訴えが出たら追加を検討。 |
+| I-OQ107 | Completion の fuzzy vs prefix ranking | DEFERRED-IMPL | `docs/impl/31-lsp-completion.md` §現状の未対応。server 側は prefix startsWith のみでフィルタし、fuzzy は client に委ねている。完全一致優先や編集距離による並べ替えを server 側で行うかは、候補数が実運用で嫌になる規模（数百〜）に達した時に `filterText` / `sortText` 設計と合わせて判断。 |
+| I-OQ108 | Auto-import completion | DEFERRED-IMPL | `docs/impl/31-lsp-completion.md` §現状の未対応。未 import 名の候補化と `additionalTextEdits` による import 行追加は本 milestone では実装しない。Workspace scan（I-OQ72）が入った時点で、export index を持って auto-import を許すかを判断する。 |
+| I-OQ109 | Record field / module field 補完の trigger 拡張 | DEFERRED-IMPL | `docs/impl/31-lsp-completion.md` §今後の拡張。`.` は現状 module qualifier 専用の trigger として扱っている。Record field access（`record.field`）の補完には `foo.bar` のような lowercase-dot チェーンの判定ロジックが必要で、parser 側の typed record info も必要。typed AST（I-OQ57）着地後に再評価。 |
+| I-OQ110 | Operator シンボル候補の出し分け | DEFERRED-IMPL | `docs/impl/31-lsp-completion.md` §新 OQ。prelude の `+` / `++` / `>>=` / `::` などは value namespace に登録されているため、無防備に列挙すると識別子カーソル位置の候補リストに operator ラベルが混ざる。L6 reviewer follow-up（2026-04-19）で `is_identifier_label` フィルタを入れ、先頭が letter / `_` の名前だけを emit するようにした。cursor が operator slot（空白直後の 2 項演算子位置）にいると判定できる段階で、operator を条件付きで再出現させるかを判断する。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -459,5 +464,20 @@ of truth とする major.minor 一致ポリシー** を正式採用。I-OQ78
 の `publisher` を placeholder のまま残す運用で `DEFERRED-IMPL`
 を継続（0.2.0 以降で user 判断）。I-OQ11（ライセンス dual 化）
 も 0.1.0 は MIT 単独で発行するため `OPEN` のまま継続。
+
+2026-04-19（L6 タスク、`docs/impl/31-lsp-completion.md`）で、
+LSP `textDocument/completion` 導入に伴い **I-OQ106〜I-OQ109** を
+§1.5 に追加。いずれも `DEFERRED-IMPL`。trigger 文字の拡張
+（I-OQ106）は実運用時の訴えベース、fuzzy vs prefix ランキング
+（I-OQ107）は候補数が膨らんだ段階で、auto-import（I-OQ108）は
+workspace scan（I-OQ72）連動、record / module field 補完
+（I-OQ109）は typed AST（I-OQ57）連動で再評価する。
+
+2026-04-19（L6 reviewer follow-up、`docs/impl/31-lsp-completion.md`
+の候補収集契約セクション追加と合わせて）で、**I-OQ110**（operator
+シンボル候補の出し分け）を §1.5 に追加。`DEFERRED-IMPL`、現状は
+先頭文字が letter / `_` の名前だけを emit して operator（`+` /
+`++` / `>>=` / `::` …）を抑止している。cursor が operator slot に
+あると判定できる段階で再出現させるかを判断する。
 
 新しく OPEN が発生したらここで列挙する運用。

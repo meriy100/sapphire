@@ -27,11 +27,16 @@
 //! L4 adds `textDocument/hover`: the handler runs analyze →
 //! resolve → typeck and returns a Markdown tooltip with the
 //! inferred scheme for the identifier under the cursor. See
-//! `docs/impl/28-lsp-hover.md` for the design notes. Completion
-//! lands in a later Track L milestone. Reparse strategy stays
-//! full-reparse even though text sync is incremental; see
-//! `docs/impl/21-lsp-incremental-sync.md` §Why split text-sync from
-//! reparse.
+//! `docs/impl/28-lsp-hover.md` for the design notes.
+//!
+//! L6 adds `textDocument/completion`: the handler reuses the same
+//! analyze → resolve → typeck pipeline and collects in-scope
+//! identifiers (local binders, top-level names, prelude / imported
+//! names, module qualifiers) into a list of `CompletionItem`s. See
+//! `docs/impl/31-lsp-completion.md` for the design notes. Reparse
+//! strategy stays full-reparse even though text sync is incremental;
+//! see `docs/impl/21-lsp-incremental-sync.md` §Why split text-sync
+//! from reparse.
 
 use dashmap::DashMap;
 use sapphire_compiler::analyze::{AnalysisResult, analyze};
@@ -39,7 +44,8 @@ use sapphire_compiler::error::CompileError;
 use sapphire_compiler::resolver::resolve;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
-    Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+    CompletionItem, CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
+    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
     GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
     InitializeParams, InitializeResult, InitializedParams, Location, MessageType, OneOf, Position,
     ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
@@ -47,6 +53,7 @@ use tower_lsp::lsp_types::{
 };
 use tower_lsp::{Client, LanguageServer};
 
+use crate::completion::find_completion_items;
 use crate::definition::find_definition;
 use crate::diagnostics::{build_line_map, compile_error_to_diagnostic};
 use crate::edit::{ApplyError, apply_change};
@@ -110,6 +117,19 @@ impl SapphireLanguageServer {
                 // returns a Markdown-formatted type scheme tooltip.
                 // See `docs/impl/28-lsp-hover.md`.
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
+                // L6: advertise `textDocument/completion` support.
+                // Clients trigger completion on every identifier
+                // keypress by default; `trigger_characters` only
+                // needs to list non-identifier characters that should
+                // also pop the list. We add `.` for module-qualified
+                // references (`Http.ma|` → propose `map`). Snippet
+                // completion is covered by the L7 VSCode extension
+                // `snippets/` bundle, not the server.
+                // See `docs/impl/31-lsp-completion.md`.
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(vec![".".to_string()]),
+                    ..CompletionOptions::default()
+                }),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -148,6 +168,40 @@ impl SapphireLanguageServer {
             uri: uri.clone(),
             range,
         })
+    }
+
+    /// Resolve a `(uri, position)` pair into a `Vec<CompletionItem>`
+    /// by running the same `analyze → resolve → typeck` pipeline L4
+    /// hover uses, then walking the resolver tables via
+    /// [`crate::completion::find_completion_items`]. Exposed as a
+    /// pure `&self` helper so tests can exercise the lookup without
+    /// spinning up a real LSP client.
+    ///
+    /// Returns `None` when the document is not in the store or when
+    /// analysis cannot produce a module. An empty `Vec` is a valid
+    /// return (cursor on whitespace with no in-scope names); the
+    /// caller is expected to forward it to the client as
+    /// `Some(CompletionResponse::Array(vec![]))`.
+    pub fn resolve_completion_at(
+        &self,
+        uri: &Url,
+        position: Position,
+    ) -> Option<Vec<CompletionItem>> {
+        let text = self.documents.get(uri).map(|e| e.text.clone())?;
+        let analysis = analyze(&text);
+        let module = analysis.module?;
+        let resolved = resolve(module.clone()).ok()?;
+        let module_name = resolved.env.id.display();
+        let typed = collect_hover_types(&module_name, &module);
+        let line_map = build_line_map(&text);
+        let byte_offset = line_map.byte_offset(position)?;
+        Some(find_completion_items(
+            &module,
+            &resolved,
+            &typed,
+            &text,
+            byte_offset,
+        ))
     }
 
     /// Resolve a `(uri, position)` pair into an LSP [`Hover`] by
@@ -424,6 +478,21 @@ impl LanguageServer for SapphireLanguageServer {
         );
         Ok(self.resolve_position_to_hover(&uri, position))
     }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let uri = params.text_document_position.text_document.uri.clone();
+        let position = params.text_document_position.position;
+        tracing::trace!(
+            uri = %uri,
+            line = position.line,
+            character = position.character,
+            "textDocument/completion",
+        );
+        let items = self
+            .resolve_completion_at(&uri, position)
+            .unwrap_or_default();
+        Ok(Some(CompletionResponse::Array(items)))
+    }
 }
 
 #[cfg(test)]
@@ -482,6 +551,21 @@ mod tests {
             Some(HoverProviderCapability::Simple(true)) => {}
             other => panic!("expected Simple(true) hover_provider, got {other:?}"),
         }
+
+        // L6: `textDocument/completion` advertised with `.` as the
+        // only explicit trigger character.
+        let completion = result
+            .capabilities
+            .completion_provider
+            .expect("completion_provider present");
+        let triggers = completion
+            .trigger_characters
+            .expect("completion_provider.trigger_characters set");
+        assert_eq!(
+            triggers,
+            vec![".".to_string()],
+            "expected `.` as sole trigger char",
+        );
     }
 
     #[test]
