@@ -209,16 +209,17 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| I-OQ1 | Rust MSRV | DEFERRED-IMPL | edition 2024 解禁（1.85+）は確定。具体の数字は I2 着手時に固定。 |
+| I-OQ1 | Rust MSRV | DECIDED | **1.85.0** に pin（2026-04-19、I2 着手時に確定）。edition 2024 を使うための最小版。`rust-toolchain.toml` と各 `Cargo.toml` の `rust-version` で強制。詳細は `docs/impl/06-scaffolding.md` §MSRV。 |
 | I-OQ2 | Parser 戦略 | DEFERRED-IMPL | `chumsky` / `nom` / `lalrpop` / 手書き再帰下降のどれか。I3（レキサ着手）前にパイロットで判断。 |
 | I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
 | I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
-| I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。 |
+| I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。I2 時点では `ubuntu-latest` 単独で `check / fmt / clippy / test` を回す最小構成（`.github/workflows/ci.yml`）。macOS / Windows matrix は Track D（クロスコンパイル）で拡張。 |
 | I-OQ6 | `lsp-types` のバージョン pin | DEFERRED-IMPL | `tower-lsp` が引き込む版に追随するか workspace で明示 pin するか。L1 着手時に決定。`07-lsp-stack.md` 参照。 |
 | I-OQ7 | `tower-lsp` 本家 vs fork | DEFERRED-IMPL | 本家のメンテペース低下時は `tower-lsp-server` 等の fork 採用を検討。L1 着手時に再確認。`07-lsp-stack.md` 参照。 |
 | I-OQ8 | ロギング基盤 | DEFERRED-IMPL | `tracing` 推奨（コンパイラ本体 I2 と揃える）。代替は `log` + `env_logger`。I2 で確定。`07-lsp-stack.md` 参照。 |
 | I-OQ9 | LSP のインクリメンタル計算基盤 | DEFERRED-IMPL | L3 は naive 再解析で開始。将来 Salsa 等を導入する段階で同期モデル（`lsp-server`）への乗せ替えも含め再評価。`07-lsp-stack.md` 参照。 |
 | I-OQ10 | LSP の transport 抽象 | DEFERRED-LATER | 初回は stdin/stdout のみ。TCP / pipe は VSCode 以外のエディタ対応時（本フェーズ外）に再検討。`07-lsp-stack.md` 参照。 |
+| I-OQ11 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -331,8 +332,9 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 
 ## 5. 直近で user 判断が要るもの
 
-2026-04-18 の対話で 7 件の OPEN を処理し、§1〜§3 に反映済。現在
-残っている **OPEN** は無し。
+2026-04-18 の対話で 7 件の OPEN を処理し、§1〜§3 に反映済。
+2026-04-19 の I2 着手で **I-OQ11（ライセンス dual 化）** が新規
+OPEN として追加。user 判断待ち。
 
 2026-04-19（S1 タスク）で、13 由来の「要反映」C 項目を全件反映
 済：**02-OQ4 / 02-OQ5 / 05-OQ6 / 08-OQ1 / 08-OQ2 / 08-OQ5 /

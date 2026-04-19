@@ -1,0 +1,9 @@
+[package]
+name = "sapphire-core"
+description = "Shared types (spans, diagnostics, AST) used by the Sapphire compiler and language server."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
