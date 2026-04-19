@@ -107,6 +107,14 @@ document）で集中管理する。本 roadmap は「今どこまで進んだか
   conditioned rules の次フェーズ向け改訂案、spec-first フェーズ
   の凍結判断。D 決定（04 OQ2、09 OQ2、12 OQ6）と C 修正はユーザ
   サインオフ後の follow-up commit で着地。
+- **実装フェーズ exit（第一版完成、2026-04-19）** — ウェーブ 7 の
+  I9 審査で、第一版完成の 5 条件（`.sp` → `.rb` / runtime gem /
+  M9 4 例題 end-to-end / CLI `build run check` / VSCode LSP 診断
+  + hover + goto-def）すべてに ✅ が付いた。M9 4 例題 smoke 4/4、
+  `cargo test --workspace` 472 pass、`bundle exec rspec` 142 pass。
+  監査記録は `docs/impl/30-first-release-audit.md`。ウェーブ 7 の
+  うち D3 publish と L6 completion は並行 worktree で継続、次
+  フェーズ scope は user と合意後に展開する。
 
 ## マイルストーン
 

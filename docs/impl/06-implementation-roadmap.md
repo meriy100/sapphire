@@ -11,6 +11,9 @@
 > **第一版完成 = M9 例題プログラムが end-to-end で動く最初の
 > コンパイラ + ランタイム、および VSCode で動く Language Server**
 
+**2026-04-19 到達**（I9 審査、`docs/impl/30-first-release-audit.md`
+参照）。5 条件すべて pass、M9 4 例題 smoke 4/4。
+
 具体化：
 
 1. Sapphire ソース（`.sp`）→ Ruby モジュール（`.rb`）のコンパイル
@@ -72,7 +75,7 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | **I7b** | Codegen ADT/レコード → タグ付きハッシュ（spec 10）🟢 | I6b, R2 |
 | **I7c** | Codegen `Ruby` monad（spec 11）🟢 | I6c, R4 |
 | **I8** | CLI（`build / run / check`、`sapphire.yml`）🟢 | I7c |
-| **I9** | M9 例題 4 本の end-to-end 通し | I8, R6 |
+| **I9** | M9 例題 4 本の end-to-end 通し 🟢 | I8, R6 |
 
 ### Track R (6 task)
 
@@ -188,9 +191,12 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i9-m9-finalize` | **I9** M9 end-to-end 最終審査 + 完成宣言 🟡 |
+| 1 | `impl/i9-m9-finalize` | **I9** M9 end-to-end 最終審査 + 完成宣言 🟢 |
 | 2 | `impl/l6-completion` | **L6** completion 🟡 |
 | 3 | `impl/d3-release-prep` | **D3** 初回リリース準備（CHANGELOG / Release note / tag 準備まで、実 publish は user 判断） 🟡 |
+
+I9 着地で実装フェーズの exit condition（第一版完成の 5 条件）に
+到達。詳細は `docs/impl/30-first-release-audit.md`。
 
 （L5 / L7 / T2c は先行着地済。）
 
