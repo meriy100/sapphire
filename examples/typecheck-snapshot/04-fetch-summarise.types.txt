@@ -1,0 +1,10 @@
+TypedProgram (2 modules)
+
+== module Http ==
+  get : String -> Ruby (Result HttpError String)
+
+== module Fetch ==
+  main : Ruby {  }
+  explain : HttpError -> String
+  stringLength : String -> Ruby Int
+  rubyPuts : String -> Ruby {  }

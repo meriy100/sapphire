@@ -1,0 +1,7 @@
+TypedProgram (1 modules)
+
+== module Main ==
+  main : Ruby {  }
+  greet : String -> Ruby {  }
+  makeMessage : String -> String
+  rubyPuts : String -> Ruby {  }

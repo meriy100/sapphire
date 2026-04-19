@@ -1,0 +1,9 @@
+TypedProgram (1 modules)
+
+== module NumberSum ==
+  main : Ruby {  }
+  parseAll : List String -> Result String (List Int)
+  parseInt : String -> Result String Int
+  sumOf : List Int -> Int
+  rubyReadLines : String -> Ruby (List String)
+  rubyPuts : String -> Ruby {  }

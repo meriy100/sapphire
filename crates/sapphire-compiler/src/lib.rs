@@ -35,3 +35,4 @@ pub mod layout;
 pub mod lexer;
 pub mod parser;
 pub mod resolver;
+pub mod typeck;
