@@ -20,13 +20,15 @@ module Sapphire
       # Raised by `Marshal.to_ruby` / `to_sapphire` when the input
       # shape disagrees with the declared Sapphire type.
       #
-      # Implementation lands in R3 (Track R).
+      # The class itself is defined here in R1; raise sites land in
+      # R3 when the Marshal helpers are implemented.
       class MarshalError < Base; end
 
       # Raised by `ADT.match` (and similar helpers) when a
       # non-tagged value reaches a point that requires one.
       #
-      # Implementation lands in R2 (Track R).
+      # The class itself is defined here in R1; raise sites land in
+      # R2 when the ADT helpers are implemented.
       class BoundaryError < Base; end
     end
   end

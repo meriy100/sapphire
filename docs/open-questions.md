@@ -214,8 +214,8 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
 | I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
 | I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。 |
-| I-OQ6 | `sapphire-runtime` 側 Ruby formatter / linter 採否 | DEFERRED-IMPL | R1 では rubocop / standard-ruby を導入せず scaffold を最小化。`docs/impl/08-runtime-layout.md` §Rubocop / formatter。R2（ADT 実装）着地時に再評価。 |
-| I-OQ7 | `runtime/` を Cargo workspace の member にすべきか | DEFERRED-IMPL | 現状 Rust workspace 外。`runtime/` は独立 Ruby gem として閉じ、I2 の Cargo workspace には含めない。D1（配布設計）で再訪。 |
+| I-OQ12 | `sapphire-runtime` 側 Ruby formatter / linter 採否 | DEFERRED-IMPL | R1 では rubocop / standard-ruby を導入せず scaffold を最小化。`docs/impl/08-runtime-layout.md` §Rubocop / formatter。R2（ADT 実装）着地時に再評価。 |
+| I-OQ13 | `runtime/` を Cargo workspace の member にすべきか | DEFERRED-IMPL | 現状 Rust workspace 外。`runtime/` は独立 Ruby gem として閉じ、I2 の Cargo workspace には含めない。D1（配布設計）で再訪。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
