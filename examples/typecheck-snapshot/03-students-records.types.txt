@@ -1,0 +1,10 @@
+TypedProgram (1 modules)
+
+== module Students ==
+  topScorersByGrade : List { grade : Int, name : String, score : Int } -> List { grade : Int, top : { grade : Int, name : String, score : Int } }
+  uniqueGrades : List { grade : Int, name : String, score : Int } -> List Int
+  addGradeIfAbsent : { grade : Int, name : String, score : Int } -> List Int -> List Int
+  bestIn : Int -> List { grade : Int, name : String, score : Int } -> { grade : Int, name : String, score : Int }
+  pickBetter : { grade : Int, name : String, score : Int } -> { grade : Int, name : String, score : Int } -> { grade : Int, name : String, score : Int }
+  member : Int -> List Int -> Bool
+  foldr1 : forall a. (a#9 -> a#9 -> a#9) -> List a#9 -> a#9
