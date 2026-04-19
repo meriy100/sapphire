@@ -393,9 +393,15 @@ spec-first フェーズのロードマップ (M1–M10) 完了と並行して、
   首位が揺れなかったため、プロトタイプを挟まずに早期決定した。
   spec-first フェーズの CLAUDE.md ルールはここで実装フェーズ用
   に改訂される（`CLAUDE.md` 参照）。
-- **I2 スキャフォールディング** (2026-04-19 以降) — `Cargo.toml`
-  と `src/` の基本モジュール構造、CI の雛形を整える。詳細は
-  着手時に docs/impl/ に追記。
+- **ウェーブ 1** (2026-04-19 **完了**) — I2 / R1 / S1 / L0 を
+  worktree 並列で着地。`Cargo.toml` workspace（3 クレート、MSRV
+  1.85.0）、`sapphire-runtime` gem の scaffold、S1 C-amendments の
+  本文反映、LSP スタック選定（tower-lsp）。詳細は
+  `docs/impl/06-scaffolding.md`, `08-runtime-layout.md`,
+  `07-lsp-stack.md`。
+- **ウェーブ 2** (2026-04-19 以降、進行中) — I3 レキサ・R2/R3
+  ADT+Marshalling・L1 LSP サーバ scaffold・T2a tutorial ch5 書き
+  直し・D1 配布設計研究。
 
 実装フェーズ全体の詳細は **`docs/impl/06-implementation-roadmap.md`**
 で living に追跡する。6 トラック（I 実装・R ランタイム・L LSP・
