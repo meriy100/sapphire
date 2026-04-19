@@ -14,18 +14,21 @@ modules that can be called from plain Ruby. A signature feature is an
 runs embedded Ruby snippets on a separate thread and threads the result
 back into the pure pipeline.
 
-As of 2026-04-19, Waves 1–4 and part of Wave 5 of the implementation
-phase have landed. The compiler pipeline is now **lexer → layout
-resolution → parser (with AST in `sapphire-core`) → name resolution**,
-with type checking (I6) and runtime thread/loading support (R5/R6)
-in flight. The LSP serves `publishDiagnostics` for lex/layout/parse
-errors over incremental text sync and is being extended with
-`textDocument/definition`. The tutorial now covers ch1–ch7 including
-a HKT/typeclasses bonus chapter. Distribution design is documented;
-actual cross-compile CI is the next wave. Progress is tracked in
-`docs/impl/06-implementation-roadmap.md`.
+As of 2026-04-19, Waves 1–6 and the I9 audit of Wave 7 have landed.
+The compiler pipeline runs end-to-end **lexer → layout resolution →
+parser → name resolution → type checker (HM + ADT/Record + type
+classes) → codegen (expr / ADT / `Ruby` monad) → CLI**, and the
+`sapphire-runtime` gem (R1–R6) executes the generated Ruby with
+thread-based `Ruby` monad and version-checked loading. The LSP
+serves `publishDiagnostics` / `hover` / `definition` over
+incremental text sync, and the VSCode extension wraps the stack.
+The M9 example suite (4 programs, 30–80 lines each) runs 4/4
+under `sapphire build` + `ruby -I runtime/lib`. `docs/impl/30-
+first-release-audit.md` records the evidence. Wave 7 residuals
+(L6 completion, D3 release-prep) and the next-phase scoping
+conversation with user are the outstanding work items.
 
-## Current phase: implementation (from 2026-04-19)
+## Current phase: implementation exit reached (2026-04-19)
 
 The spec-first phase concluded on 2026-04-19 with two milestones
 landing:
@@ -37,30 +40,50 @@ landing:
   which chose **Rust** as the language in which Sapphire's compiler
   will be written.
 
-The project is now in the **implementation phase**. In scope during
-this phase (tracks I / R / L / T / S / D, see
-`docs/impl/06-implementation-roadmap.md`):
+The implementation phase (tracks I / R / L / T / S / D, see
+`docs/impl/06-implementation-roadmap.md`) opened the same day. By
+the evening of 2026-04-19 its exit condition was reached: the five
+"first release" criteria in `docs/impl/06-implementation-roadmap.md`
+§完成の定義 are all met, per the I9 audit
+(`docs/impl/30-first-release-audit.md`):
 
-- Scaffolding the Rust compiler project (`Cargo.toml`, `src/`, CI) —
-  done (Wave 1, I2).
-- Implementing lexer, parser, AST, type checker, code generator in
-  stages aligned with the spec documents.
-- Building `sapphire-runtime` — the Ruby-side support gem that
-  generated code depends on (per `docs/build/03-sapphire-runtime.md`) —
-  scaffold done (Wave 1, R1).
-- Building a Language Server (VSCode-only for the first iteration,
-  track L) using `tower-lsp`.
-- Tutorial maintenance (T2 pedagogy revision track) alongside
-  implementation feedback.
-- Distribution design (single `sapphire` gem vs split, platform
-  native gems, track D).
-- Closing open questions under `docs/open-questions.md` as
-  implementation work reveals answers.
+1. `.sp` → `.rb` compilation is wired through `sapphire-compiler`.
+2. `sapphire-runtime` executes the generated modules (142 rspec
+   examples pass).
+3. All four M9 example programs run end-to-end under
+   `sapphire build` + `ruby -I runtime/lib`.
+4. CLI `build` / `run` / `check` are implemented in a single
+   `sapphire` binary.
+5. The VSCode LSP returns `publishDiagnostics`, `hover`, and
+   `definition` for `.sp` files.
 
-This phase ends when Sapphire has a first usable compiler + runtime
-that can run the M9 example programs end-to-end. Subsequent phases
-(self-host exploration, broader stdlib, ecosystem) will be scoped
-separately.
+Residual items from the implementation-phase roadmap:
+
+- **L6 completion** and **D3 release-prep** (CHANGELOG / tag /
+  gem-push plumbing) continue in their own worktrees.
+- Publishing decisions (gem push, GitHub Release, VSCode
+  marketplace, license dual-licensing) remain user judgement calls
+  (`docs/open-questions.md` I-OQ11, I-OQ29–33, I-OQ78).
+- A handful of known soundness / ergonomics holes (I-OQ60, I-OQ63,
+  I-OQ82, I-OQ96, I-OQ97, etc.) are documented and deliberately
+  deferred. The audit lists 27 such items.
+
+### Next phase: to be scoped with user
+
+`CLAUDE.md` §Phase-conditioned rules was written for the
+implementation phase and references its exit condition. Now that
+the exit is met, the next phase needs to be **scoped with user
+before further rules work**:
+
+- Candidate scopes include self-host exploration, stdlib
+  expansion, packaging ecosystem (gem / marketplace publish),
+  and closing the soundness OQs. None of these are pre-selected.
+- The audit document flags the specific CLAUDE.md lines that will
+  need to be revised once scope is agreed
+  (`docs/impl/30-first-release-audit.md` §5).
+- Until user signs off, the existing rules remain in force:
+  spec-tree host-language neutrality, `docs/impl/` decision
+  records, `docs/open-questions.md` as the OQ index.
 
 ### Historical record: the spec-first phase (concluded)
 
