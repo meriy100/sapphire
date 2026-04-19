@@ -735,14 +735,15 @@ impl<'t> Parser<'t> {
             self.bump();
             type_params.push(tv);
         }
+        // spec 03 §Abstract syntax: `data T a₁ … aₙ = C₁ … | … | Cₘ …`
+        // は `=` と少なくとも 1 本の constructor を必須とする。GADT /
+        // abstract data decl は意図的にスコープ外（I-OQ3 で将来再訪）。
+        self.expect(&TokenKind::Equals, "`=`")?;
         let mut ctors = Vec::new();
-        if matches!(self.peek_kind(), TokenKind::Equals) {
+        ctors.push(self.parse_data_ctor()?);
+        while matches!(self.peek_kind(), TokenKind::Bar) {
             self.bump();
             ctors.push(self.parse_data_ctor()?);
-            while matches!(self.peek_kind(), TokenKind::Bar) {
-                self.bump();
-                ctors.push(self.parse_data_ctor()?);
-            }
         }
         let end = ctors.last().map(|c| c.span).unwrap_or(start);
         Ok(Decl::Data(DataDecl {
