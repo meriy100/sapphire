@@ -166,14 +166,14 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | 10-OQ3 | シンボルキー vs 文字列キー hash | DECIDED | シンボルキー（13 C）。2026-04-19、10 §Data model Records 節に合理性を追記し OQ を削除。 |
 | 10-OQ4 | 例外 backtrace の構造 | DEFERRED-LATER | `List String` で十分。 |
 | 10-OQ5 | `ruby_import` 外部ファイル | DEFERRED-LATER | 需要なし。 |
-| 10-OQ6 | Ruby 3.x を超えるバージョン対応 | WATCHING | 3.3 pin 維持。4.x 到来時に再訪。 |
+| 10-OQ6 | Ruby 3.x を超えるバージョン対応 | WATCHING | 3.3 pin 維持。4.x 到来時に再訪。pin を 4.0 に動かす判断が出たら `11-OQ1`（Ractor 方針メモ）も併せて再訪する。 |
 | 10-OQ7 | 高 arity ADT の ergonomic | DEFERRED-LATER | Struct/OpenStruct ラッパ等。 |
 
 ### 11 Ruby evaluation monad
 
 | ID | 要旨 | Status | 決定 / メモ |
 |---|---|---|---|
-| 11-OQ1 | 並列合成 | DEFERRED-LATER | 並行性設計。 |
+| 11-OQ1 | 並列合成 | DEFERRED-LATER | 並行性設計。**方針メモ（2026-04-19）**：明示的な `parallel : List (Ruby a) -> Ruby (List a)` 相当のコンビネータ導入時、実装候補として Ruby 4.0 の Ractor を採る。Sapphire ADT は frozen + 構造的等価なので `Ractor.make_shareable` と相性がよい。ただし **default 実行モデルは Ractor にしない**：10 の `:=` 束縛経由で埋め込まれる Ruby スニペットは Ractor 非 safe な gem を呼びうるため、明示 parallel を要求した箇所に限定する。Ractor を default 化する場合は **10-OQ6**（Ruby バージョン pin、3.3 → 4.0）を動かす必要があり、本 OQ と **10-OQ6 は連動**。仕様本決定は最初のコンパイラ完成後。 |
 | 11-OQ2 | タイムアウト / キャンセル | DEFERRED-LATER | 同上。 |
 | 11-OQ3 | ストリーミング | DEFERRED-LATER | 同上。 |
 | 11-OQ4 | 例外クラス粒度 | DEFERRED-LATER | 拡張。 |

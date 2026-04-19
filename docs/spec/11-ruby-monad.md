@@ -54,6 +54,21 @@ Document 10 already names the type `Ruby` throughout (treating
 it opaquely); 11 fills in its class instances and the `run`
 function.
 
+### Role term: *effect monad*
+
+The type name `Ruby` collides with the host-language name in
+prose (e.g. "the Ruby monad running Ruby code"). When the role
+rather than the identity matters, this document and the tutorial
+call it the **effect monad**. Formal signatures and BNF continue
+to use the type name `Ruby a`; the role term is conversational
+and does not introduce a new synonym at the type level.
+
+Rule of thumb:
+
+- Type positions, BNF, typing rules: **`Ruby a`**.
+- Prose referring to the concept ("an effect monad primitive",
+  "composing effect monad actions"): **effect monad**.
+
 ## Type signature
 
 ```
@@ -313,7 +328,7 @@ main = print "hello"
   Sapphire-side caller's perspective. Interrupting / timing-out
   a `Ruby a` is 11 OQ 2.
 
-- **The Ruby monad is strict in its discrete steps.** Each `>>=`
+- **The effect monad is strict in its discrete steps.** Each `>>=`
   step fully completes before the next begins. Lazy / incremental
   streaming of results (e.g. for a `Ruby` action that emits a
   long `List String`) is not part of the model. Streaming is
