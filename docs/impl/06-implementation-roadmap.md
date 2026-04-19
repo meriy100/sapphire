@@ -144,22 +144,24 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 4 | `impl/t2a-tutorial-ch5` | **T2a** tutorial ch5 🟢 |
 | 5 | `impl/d1-packaging` | **D1** gem packaging 調査 🟢 |
 
-### ウェーブ 3（I3 着地後）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 3（I3 着地後）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i4-parser` | **I4** パーサ + AST 🟡 |
-| 2 | `impl/r4-ruby-monad` | **R4** Ruby monad primitives 🟡 |
-| 3 | `impl/t2b-tutorial-ch6` | **T2b** tutorial ch6 🟡 |
-| 4 | （I4 着地後） | **L2** parse-error diagnostics ⬜ |
+| 1 | `impl/i4-parser` | **I4** パーサ + AST 🟢 |
+| 2 | `impl/r4-ruby-monad` | **R4** Ruby monad primitives 🟢 |
+| 3 | `impl/t2b-tutorial-ch6` | **T2b** tutorial ch6 🟢 |
 
-### ウェーブ 4（I4 着地後）
+### ウェーブ 4（I4 着地後）🟡 **進行中（2026-04-19〜）**
 
-| # | タスク |
-|---|---|
-| 1 | **I5** → **I6** 型検査 |
-| 2 | **R5** → **R6** |
-| 3 | **L3** document sync |
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i5-resolver` | **I5** 名前解決 🟡 |
+| 2 | `impl/r5-r6-runtime` | **R5** thread 管理 → **R6** loading 契約 🟡 |
+| 3 | `impl/l2-diagnostics` | **L2** parse-error diagnostics 🟡 |
+| 4 | `impl/t2c-tutorial-advanced` | **T2c** tutorial 発展篇（HKT 隔離章） 🟡 |
+| 5 | （I5 着地後） | **I6a** → **I6b** → **I6c** 型検査 ⬜ |
+| 6 | （L2 着地後） | **L3** document sync ⬜ |
 
 ### ウェーブ 5（I6 着地後）
 
