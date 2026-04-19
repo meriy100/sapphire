@@ -214,7 +214,7 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
 | I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
 | I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。I2 時点では `ubuntu-latest` 単独で `check / fmt / clippy / test` を回す最小構成（`.github/workflows/ci.yml`）。macOS / Windows matrix は Track D（クロスコンパイル）で拡張。 |
-| I-OQ6 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
+| I-OQ11 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
@@ -328,7 +328,7 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 ## 5. 直近で user 判断が要るもの
 
 2026-04-18 の対話で 7 件の OPEN を処理し、§1〜§3 に反映済。
-2026-04-19 の I2 着手で **I-OQ6（ライセンス dual 化）** が新規
+2026-04-19 の I2 着手で **I-OQ11（ライセンス dual 化）** が新規
 OPEN として追加。user 判断待ち。
 
 残る「要反映」系タスク：
