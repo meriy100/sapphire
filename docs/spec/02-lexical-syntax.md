@@ -42,8 +42,8 @@ Unicode code points after any BOM has been stripped.
 ## Whitespace and comments
 
 Whitespace characters are space (U+0020), horizontal tab (U+0009), and
-line feed (U+000A). Tab width is **not** semantically significant; see
-question 4 under *Layout*.
+line feed (U+000A). Tab width is **not** semantically significant; tabs
+in layout-anchoring positions are a lexical error (see §Layout).
 
 Comments come in two forms; both behave exactly like whitespace:
 
@@ -85,6 +85,15 @@ follows:
 
 A single underscore `_` is the reserved wildcard (used in patterns in
 a later document) and is not a binding identifier.
+
+**Character set.** Identifier characters are **ASCII only** at this
+layer: the character classes `[a-z_]`, `[A-Z]`, and `[A-Za-z0-9_']`
+above are literal. Unicode letters in `lower_ident` / `upper_ident`
+are out of scope for the first implementation. This keeps tooling
+(lexer, diagnostics, editor integration, review tooling) simple.
+Admitting Unicode identifiers later is a pure monotonic extension:
+adding code points to the identifier classes cannot reject any
+program that the ASCII-only grammar accepts.
 
 ## Keywords
 
@@ -268,9 +277,11 @@ let { x = 1 ; y = 2 } in x + y
 Tab characters are **not** used as layout anchors. A horizontal tab
 that appears before the first non-whitespace token of a logical line
 (i.e. in a position that would otherwise set or test layout
-indentation) is a lexical error. Inside a line, after the first
-non-whitespace token, a tab is ordinary whitespace. This is
-strict-by-default; see question 4.
+indentation) is a **lexical error**. Inside a line, after the first
+non-whitespace token, a tab is ordinary whitespace. This rule is
+strict rather than defining a tab stop: the alternative — fixing a
+tab stop width — was rejected because a single source would render
+with different layout under different editor settings.
 
 ## Lexical summary for document 01
 
@@ -319,16 +330,7 @@ For convenience, the tokens referenced by document 01 resolve as:
    overloading lands in a later document.
    *Closed by document 05*: fixed Elm-style table. User-declarable
    fixity is re-posed as 05 OQ 3.
-4. **Tabs in layout positions.** Treating tabs in leading
-   indentation as a lexical error is strict but unambiguous; the
-   alternative is to fix a tab stop. Strict-by-default is the
-   current draft.
-5. **Identifier character set.** Restrict to ASCII, or allow Unicode
-   letters in `lower_ident` / `upper_ident`? Ruby interop may push
-   toward Unicode (Ruby method names are ASCII anyway, but user code
-   may not be), but Unicode identifiers complicate tooling and
-   review.
-6. **`::` disambiguation.** Which of list cons and pattern-level
+4. **`::` disambiguation.** Which of list cons and pattern-level
    type annotation wins `::`? If both are wanted, the other needs a
    different spelling.
    *Partially closed by document 05*: `::` is list cons. The
