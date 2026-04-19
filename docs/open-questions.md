@@ -310,6 +310,7 @@ Haskell の中間** への揺り戻しを検討する際の一次資料。
 | T-04-2 | 章 4 | `type` 別名不在が説明コスト | DECIDED (要反映) | 09-OQ2 の「admit」で解消見込み。 |
 | T-05-1 | 章 5 (型クラス) | Functor → Applicative → Monad の五本柱が同時立ち上げで入門者に重い | DECIDED | 2026-04-18：(C) 仕様維持、tutorial 章 5 を具体→抽象の順序に書き直す方針。実作業は T2 トラックで別途。 |
 | T-05-2 | 章 5 | HKT (`Functor f` の `f`) で読者が詰まる | DECIDED | 同上（C）。HKT の概念導入は発展篇に隔離する方向で tutorial 改訂する。 |
+| T-05-3 | 章 5 (型クラス) | `Maybe a → Result e a` のブリッジ関数（`maybeToResult : e -> Maybe a -> Maybe` 相当）が prelude にないので `Result` の `do` 例で手書き変換（`case readInt s of Just n -> Ok n; Nothing -> Err ...`）が入る | WATCHING | 2026-04-19 T2a 章 5 書き直し中に発見。`maybeToResult` / `fromMaybe' : e -> Maybe a -> Result e a` のようなユーティリティを 09 prelude に追加する余地あり。M9 例題で頻出するようなら 09 に正式追加を検討。 |
 | T-06-1 | 章 6 (Ruby monad) | `Monad` の比喩が `Maybe`/`Result` と `Ruby` で別物になり摩擦 | DECIDED | 同上（C）。11 の意味論は触らず、tutorial での `do` 脱糖説明を強化する方向で T2 対応。 |
 | T-02..06 | 全般 | `仕様への気付き` 節を持つ章が 5 本 | WATCHING | チュートリアルが改訂されるたびに気付きをここへ集約する運用。 |
 
