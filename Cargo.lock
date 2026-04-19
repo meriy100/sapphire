@@ -475,6 +475,8 @@ version = "0.0.0"
 name = "sapphire-lsp"
 version = "0.0.0"
 dependencies = [
+ "dashmap",
+ "sapphire-compiler",
  "sapphire-core",
  "tokio",
  "tower-lsp",

@@ -18,7 +18,19 @@
 //! The AST itself lives in [`sapphire_core::ast`] so that the LSP
 //! crate can share it with the compiler without depending on the
 //! compiler pipeline.
+//!
+//! Two auxiliary modules sit alongside the pipeline stages:
+//!
+//! - [`error`] — [`error::CompileError`], a unifying envelope over
+//!   lex / layout / parse errors that downstream code (CLI, LSP)
+//!   can consume without matching on three different per-stage
+//!   types.
+//! - [`analyze`] — the one-shot entry point that runs every front-end
+//!   pass and returns an `AnalysisResult` carrying the module (on
+//!   success) and the single first error (on failure).
 
+pub mod analyze;
+pub mod error;
 pub mod layout;
 pub mod lexer;
 pub mod parser;
