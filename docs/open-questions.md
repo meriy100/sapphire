@@ -214,6 +214,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ3 | Error 型設計 | DEFERRED-IMPL | `anyhow` ベースかカスタム ADT か。layer ごとに揃える。 |
 | I-OQ4 | Ruby へのパッケージング | DEFERRED-IMPL | Rust バイナリを `sapphire` gem 配布する段取り。`sapphire-runtime` gem との配布関係を決める。 |
 | I-OQ5 | CI プラットフォーム | DEFERRED-IMPL | GitHub Actions 既定、cross-compilation 等の詳細は実装時。 |
+| I-OQ6 | `lsp-types` のバージョン pin | DEFERRED-IMPL | `tower-lsp` が引き込む版に追随するか workspace で明示 pin するか。L1 着手時に決定。`07-lsp-stack.md` 参照。 |
+| I-OQ7 | `tower-lsp` 本家 vs fork | DEFERRED-IMPL | 本家のメンテペース低下時は `tower-lsp-server` 等の fork 採用を検討。L1 着手時に再確認。`07-lsp-stack.md` 参照。 |
+| I-OQ8 | ロギング基盤 | DEFERRED-IMPL | `tracing` 推奨（コンパイラ本体 I2 と揃える）。代替は `log` + `env_logger`。I2 で確定。`07-lsp-stack.md` 参照。 |
+| I-OQ9 | LSP のインクリメンタル計算基盤 | DEFERRED-IMPL | L3 は naive 再解析で開始。将来 Salsa 等を導入する段階で同期モデル（`lsp-server`）への乗せ替えも含め再評価。`07-lsp-stack.md` 参照。 |
+| I-OQ10 | LSP の transport 抽象 | DEFERRED-LATER | 初回は stdin/stdout のみ。TCP / pipe は VSCode 以外のエディタ対応時（本フェーズ外）に再検討。`07-lsp-stack.md` 参照。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
