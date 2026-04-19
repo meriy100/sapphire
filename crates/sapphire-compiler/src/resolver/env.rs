@@ -135,6 +135,14 @@ pub enum DefKind {
 pub struct Exports {
     pub values: HashMap<String, ResolvedRef>,
     pub types: HashMap<String, ResolvedRef>,
+    /// Ctor name → parent data-type name, for all *exported* ctors.
+    /// Populated by `compute_exports`. Used to filter `T(..)` imports
+    /// so that `import M (T(..))` brings only `T`'s constructors —
+    /// not unrelated values from `M` (must-fix from I5 review iter 1).
+    pub ctor_parents: HashMap<String, String>,
+    /// Method name → parent class name, for all *exported* methods.
+    /// Symmetric to `ctor_parents` for class methods.
+    pub method_parents: HashMap<String, String>,
 }
 
 impl Exports {

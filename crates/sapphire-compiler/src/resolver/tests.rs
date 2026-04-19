@@ -602,6 +602,67 @@ f = post
 }
 
 #[test]
+fn import_type_with_dotdot_filters_unrelated_values() {
+    // spec 08 §Visibility: `import M (T(..))` brings only T's
+    // constructors. Must not leak unrelated values like `get`.
+    // Regression for I5 review iter 1 (over-approximation bug).
+    let http = parse(
+        r#"module Http (get, HttpError(..)) where
+data HttpError = NetworkError | StatusError
+get : Int
+get = 1
+"#,
+    );
+    let fetch = parse(
+        r#"module Fetch (f) where
+import Http (HttpError(..))
+f : HttpError
+f = NetworkError
+"#,
+    );
+    // The above resolves — NetworkError is imported via the HttpError(..) item.
+    resolve_program(vec![http.clone(), fetch])
+        .expect("NetworkError should resolve via HttpError(..)");
+
+    // But `get` is *not* supposed to leak through `(HttpError(..))`.
+    let fetch_bad = parse(
+        r#"module Fetch (f) where
+import Http (HttpError(..))
+f : Int
+f = get
+"#,
+    );
+    let errs = resolve_program(vec![http, fetch_bad])
+        .expect_err("get should not be in scope from HttpError(..) import");
+    assert!(has_kind(&errs, |k| matches!(
+        k,
+        ResolveErrorKind::UndefinedName { name, .. } if name == "get"
+    )));
+}
+
+#[test]
+fn import_hiding_type_with_dotdot_keeps_unrelated_values() {
+    // Mirror of the fix: `hiding (T(..))` hides only T's ctors,
+    // not unrelated values.
+    let http = parse(
+        r#"module Http (get, HttpError(..)) where
+data HttpError = NetworkError | StatusError
+get : Int
+get = 1
+"#,
+    );
+    let fetch = parse(
+        r#"module Fetch (f) where
+import Http hiding (HttpError(..))
+f : Int
+f = get
+"#,
+    );
+    resolve_program(vec![http, fetch])
+        .expect("get should still be visible when hiding HttpError(..)");
+}
+
+#[test]
 fn import_hiding_leaves_hidden_undefined() {
     let http = parse(
         r#"module Http (get, post) where

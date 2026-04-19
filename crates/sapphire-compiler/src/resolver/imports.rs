@@ -36,6 +36,19 @@ pub(super) fn compute_exports(
         for def in &env.top_level {
             let r = ResolvedRef::new(env.id.clone(), def.name.clone(), def.namespace);
             exports.insert(def.name.clone(), def.namespace, r);
+            match &def.kind {
+                DefKind::Ctor { parent_type } => {
+                    exports
+                        .ctor_parents
+                        .insert(def.name.clone(), parent_type.clone());
+                }
+                DefKind::ClassMethod { parent_class } => {
+                    exports
+                        .method_parents
+                        .insert(def.name.clone(), parent_class.clone());
+                }
+                _ => {}
+            }
         }
         return Ok(exports);
     };
@@ -96,7 +109,8 @@ pub(super) fn compute_exports(
                                     ctor.clone(),
                                     Namespace::Value,
                                 );
-                                exports.insert(ctor, Namespace::Value, r);
+                                exports.insert(ctor.clone(), Namespace::Value, r);
+                                exports.ctor_parents.insert(ctor, name.clone());
                             }
                         }
                     }
@@ -129,6 +143,7 @@ pub(super) fn compute_exports(
                     }
                     let r = ResolvedRef::new(env.id.clone(), ctor.clone(), Namespace::Value);
                     exports.insert(ctor.clone(), Namespace::Value, r);
+                    exports.ctor_parents.insert(ctor.clone(), name.clone());
                 }
             }
             ExportItem::Class { name, span } => {
@@ -160,7 +175,8 @@ pub(super) fn compute_exports(
                 exports.insert(name.clone(), Namespace::Type, r);
                 for method in methods_of(env, name) {
                     let r = ResolvedRef::new(env.id.clone(), method.clone(), Namespace::Value);
-                    exports.insert(method, Namespace::Value, r);
+                    exports.insert(method.clone(), Namespace::Value, r);
+                    exports.method_parents.insert(method, name.clone());
                 }
             }
             ExportItem::ReExport { name, span } => {
@@ -216,7 +232,7 @@ pub(super) fn should_add_implicit_prelude(module: &AstModule) -> bool {
     !module
         .imports
         .iter()
-        .any(|imp| imp.name.segments.first().map(|s| s.as_str()) == Some(PRELUDE_MODULE))
+        .any(|imp| imp.name.segments.join(".") == PRELUDE_MODULE)
 }
 
 /// Apply a single `import` declaration to a module's environment.
@@ -349,23 +365,17 @@ fn collect_item(
                     return;
                 }
             }
-            // Pull every exported constructor whose home-module
-            // matches our target. Export tables do not carry an
-            // explicit parent-type link; we approximate by taking
-            // every value whose source module is `target_id` and
-            // whose name is *not* a top-level value-binding export
-            // (the caller cannot distinguish a ctor from a function
-            // without consulting the target module's env). As a
-            // compromise the caller is expected to pass along the
-            // target module's env; I5 exposes `apply_import_with_env`
-            // when this distinction matters. For the bare
-            // `apply_import` path we over-approximate and import
-            // every value export — conservative and matches spec 08
-            // `(..)` semantics when combined with a properly-formed
-            // export list on the target module.
-            for (vname, vref) in &target_exports.values {
-                if &vref.module == target_id {
-                    out.push((vname.clone(), Namespace::Value, vref.clone()));
+            // spec 08 §Visibility: `import M (T(..))` brings only T's
+            // constructors, **not** unrelated values of M. Use the
+            // ctor_parents side-table populated by `compute_exports`
+            // to filter. Unrelated values of M would leak in if we
+            // imported every exported value whose home module equals
+            // target_id (the bug the I5 reviewer flagged).
+            for (ctor_name, parent) in &target_exports.ctor_parents {
+                if parent == name {
+                    if let Some(r) = target_exports.values.get(ctor_name) {
+                        out.push((ctor_name.clone(), Namespace::Value, r.clone()));
+                    }
                 }
             }
         }
@@ -424,9 +434,12 @@ fn collect_item(
                     return;
                 }
             }
-            for (vname, vref) in &target_exports.values {
-                if &vref.module == target_id {
-                    out.push((vname.clone(), Namespace::Value, vref.clone()));
+            // Filter by method_parents — mirror the TypeAll fix above.
+            for (method_name, parent) in &target_exports.method_parents {
+                if parent == name {
+                    if let Some(r) = target_exports.values.get(method_name) {
+                        out.push((method_name.clone(), Namespace::Value, r.clone()));
+                    }
                 }
             }
         }
@@ -502,9 +515,11 @@ fn collect_hide_names(
                     errors,
                 );
                 hidden.insert((name.clone(), Namespace::Type));
-                for (vname, vref) in &target_exports.values {
-                    if &vref.module == target_id {
-                        hidden.insert((vname.clone(), Namespace::Value));
+                // `hiding (T(..))` hides only T's constructors, not
+                // unrelated values. Filter by ctor_parents.
+                for (ctor_name, parent) in &target_exports.ctor_parents {
+                    if parent == name {
+                        hidden.insert((ctor_name.clone(), Namespace::Value));
                     }
                 }
             }
@@ -543,9 +558,9 @@ fn collect_hide_names(
                     errors,
                 );
                 hidden.insert((name.clone(), Namespace::Type));
-                for (vname, vref) in &target_exports.values {
-                    if &vref.module == target_id {
-                        hidden.insert((vname.clone(), Namespace::Value));
+                for (method_name, parent) in &target_exports.method_parents {
+                    if parent == name {
+                        hidden.insert((method_name.clone(), Namespace::Value));
                     }
                 }
             }
