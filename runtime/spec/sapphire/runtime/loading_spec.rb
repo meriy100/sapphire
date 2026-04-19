@@ -85,6 +85,34 @@ RSpec.describe Sapphire::Runtime, ".require_version! (R6 loading contract)" do
         .to raise_error(Sapphire::Runtime::Errors::LoadError)
     end
 
+    it "names the offending type by class name in the error message" do
+      # The message should read "got Object" rather than the
+      # default `inspect` output (`#<Object:0x...>`), which is
+      # unhelpful to a user who just needs to know they passed
+      # the wrong type.
+      runtime.require_version!(Object.new)
+    rescue Sapphire::Runtime::Errors::LoadError => e
+      expect(e.message).to include("got Object")
+      expect(e.message).not_to include("#<Object")
+    end
+
+    it "falls back to 'anonymous class' for Class.new singletons" do
+      anon_instance = Class.new.new
+      runtime.require_version!(anon_instance)
+    rescue Sapphire::Runtime::Errors::LoadError => e
+      expect(e.message).to include("anonymous class")
+    end
+
+    it "falls back to inspect for nil (class name 'NilClass' is still usable though)" do
+      # nil's class is NilClass (name = "NilClass"), so the
+      # diagnostic reads "got NilClass" — the inspect-fallback
+      # branch is only reached for exotic BasicObject subclasses
+      # that override `class`.
+      runtime.require_version!(nil)
+    rescue Sapphire::Runtime::Errors::LoadError => e
+      expect(e.message).to include("NilClass")
+    end
+
     it "LoadError is distinct from Ruby's top-level LoadError" do
       # The runtime's namespaced LoadError is a Sapphire-runtime
       # StandardError, not Ruby's ::LoadError which is a

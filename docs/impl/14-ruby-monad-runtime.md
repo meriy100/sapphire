@@ -109,12 +109,25 @@ spec 11 §Type signature は `Ruby a` を opaque と規定するので、
 
 ### 再入可能性と反復評価
 
-`evaluate` は内部ループで `:bind` の右側 spine を iterative に
-剥がしていく。左側 `upstream_action` の評価だけが再帰で、
-`:bind` chain の右辺継続は loop で消費する。これにより
-`prim_bind(prim_return(1)) { |n| prim_bind(prim_return(n+1)) { ... } }`
-のような左結合 bind の深い chain でも Ruby のコールスタックを
-消費しない。rspec の "sequences three binds in order" / monad
+`evaluate` は内部ループで `:bind` の **右側 spine** を iterative
+に剥がしていく。`:bind` の継続 `k` が返した次の `Action` を
+`current` に差し替えて同じループで消費するため、**右結合** bind
+chain は任意の深さで tail に消費されコールスタックを伸ばさない。
+do-notation の脱糖（spec 11 §do-notation は右結合 chain を生む）
+から来る Sapphire 側の bind chain はこの経路に入るので、Sapphire
+ソースから生成される chain はスタック安全。
+
+一方、`:bind` の左側 `upstream_action` の評価は `evaluate(ma)`
+の再帰呼び出しで処理される。Ruby 側から手書きで **左結合** bind
+chain `((m >>= f) >>= g) >>= h`（Haskell でいう `foldl (>>=)`
+相当）を構築すると、N 段のネストが Ruby のコールスタック N 段と
+して現れる。M9 範囲の例題は左結合 chain を出さないので実害は
+観測されないが、Ruby 側で `foldl (>>=) m fs` のような
+構築を行うと十分な深さで `SystemStackError` に達しうる。必要に
+なったら (a) `prim_bind` 構築時に右結合へリバランスする、または
+(b) `evaluate` を明示的な work-stack に書き換える、のどちらかで
+対処する方針。どちらを選んでも右結合経路の tail consumption は
+維持できる。rspec の "sequences three binds in order" / monad
 laws セクションで基本的な連鎖深度を確認。
 
 **再入自体は admitted**（`prim_bind` の継続中で別 action を
@@ -204,6 +217,23 @@ like any other exception」と明記している。
   を起こすと情報を失う。
 
 ## スレッド分離は R5 送り
+
+> **R5 で完了**: 本節は R4 時点の判断ログ。R5 で `Ruby.run` は
+> 実際に `Thread.new { ... }.value` でフレッシュな evaluator
+> Thread を挟む形になった。設計と分離境界の詳細は
+> `docs/impl/16-runtime-threaded-loading.md` を参照。以下は R4
+> が「単一スレッド同期でも契約を満たす」と判断した経緯の記録で、
+> R5 がその判断を覆したポイント（`Thread#value` による `Interrupt`
+> 等の自動再 raise、`Thread.current[:...]` のフリー分離、再入時
+> の独立 evaluator Thread）は 16 章で更新済。
+>
+> また、spec 11 §Execution model 項 1 の「fresh Ruby-side scope」
+> は in-process `Thread` 分離では **locals と `Thread.current[:...]`
+> まで** しかカバーできない（I-OQ48 DECIDED）。global 変数 /
+> top-level constants / `$LOADED_FEATURES` / monkey-patch は
+> `run` 間で共有される前提になるため、生成コード（I7c）はこれら
+> の process-wide mutable state に依存しない契約を持つ。判断根拠
+> は 16 章 §Thread 分離方式の選択 / §分離の境界。
 
 spec 11 §Execution model 冒頭は `run` が **fresh Ruby thread** を
 spawn すると規定し、`build/03` §Threading model も同趣旨。ただし

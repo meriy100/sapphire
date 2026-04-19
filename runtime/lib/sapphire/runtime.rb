@@ -74,7 +74,7 @@ module Sapphire
         raise Errors::LoadError,
               "require_version! expects a String, Array[String], " \
               "Gem::Requirement, or Gem::Version constraint; got " \
-              "#{constraint.class.name || constraint.inspect}"
+              "#{describe_constraint_type(constraint)}"
       end
 
       if constraint.is_a?(Array) && constraint.any? { |c| !c.is_a?(String) }
@@ -103,5 +103,23 @@ module Sapphire
             "re-run the Sapphire compiler against the installed " \
             "runtime."
     end
+
+    # Build a readable type description of an argument that did
+    # not satisfy `require_version!`'s shape requirement. Prefer
+    # the class name; fall back to `"anonymous class"` for
+    # anonymous singletons / `Class.new` instances whose `#name`
+    # is `nil`; fall back to `inspect` only as a last resort (nil,
+    # BasicObject descendants that override `class`). The result
+    # is embedded verbatim in `Errors::LoadError#message`, so it
+    # must remain compact enough to read at a glance.
+    def self.describe_constraint_type(constraint)
+      klass = constraint.class
+      name = klass.name
+      return name if name && !name.empty?
+      return "anonymous class" if klass.is_a?(Class)
+
+      constraint.inspect
+    end
+    private_class_method :describe_constraint_type
   end
 end
