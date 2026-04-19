@@ -217,7 +217,7 @@ L2 の `refresh` を L3 で 2 本に分けた：
 | 関数 | 使う notification | starting buffer | 差分 |
 |---|---|---|---|
 | `refresh_full` | `did_open` | n/a（params.text） | 無条件上書き |
-| `refresh_incremental` | `did_change` | `documents.get(&uri)` | version 単調性 chek、`apply_changes` |
+| `refresh_incremental` | `did_change` | `documents.get(&uri)` | version 単調性 check、`apply_changes` |
 | `analyze_and_publish` | 両方 | — | analyze 実行と publish race guard |
 
 `analyze_and_publish` が共通化されたことで、L2 と L3 の race 保護

@@ -65,11 +65,11 @@ vscode` の **出力** を選ぶと同じ trace が追える。
 
 - テキスト差分は incremental、**再解析は依然として full reparse**。
   edit が来るたびに `analyze` 全体を走らせる。真の incremental
-  parsing（AST 再利用）は I-OQ52 / I-OQ9 で継続 punt。
+  parsing（AST 再利用）は I-OQ9 / I-OQ67 で継続 punt。
 - `LineMap` は edit ごとに再構築する最小実装。巨大ファイルでの
   最適化は I-OQ53 で扱う。
 - `rangeLength` フィールドは無視する（LSP 3.17 で deprecated、
   実装ごとに "UTF-16 / byte" の解釈が割れているため）。詳細は
   `docs/impl/21-lsp-incremental-sync.md` §range_length を参照。
 - 1 ファイルにつき **最大 1 件** の diagnostic しか返らないのは
-  L2 と同様（I-OQ52）。
+  L2 と同様（parser error recovery の punt は I-OQ52）。
