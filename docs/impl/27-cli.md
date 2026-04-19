@@ -63,7 +63,8 @@ app/main.rb`）とは独立で、`sapphire.rs` の `ruby_class_path` /
 
 ### `--version`
 
-`sapphire 0.0.0` と出力（workspace.package.version を参照）。
+`sapphire 0.1.0` と出力（`[workspace.package].version` を参照。
+version bump のたび本文と `Cargo.toml` を同時に動かす）。
 
 ### `--help`
 

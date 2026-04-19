@@ -1,9 +1,9 @@
 name: Release build
 
-# Track D2: platform matrix で Rust バイナリをビルドし、
-# artifact として保存する骨組み。D3（tag push → gem build →
-# rubygems.org push）はまだ行わない。詳細は
-# docs/impl/29-ci-cross-compile.md を参照。
+# Track D2 で 5 platform matrix の artifact 生成を整え、D3 で
+# GitHub Release への attach を追加した。詳細は
+# docs/impl/29-ci-cross-compile.md および
+# docs/impl/32-release-process.md を参照。
 
 on:
   workflow_dispatch:
@@ -12,15 +12,14 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write  # GitHub Release を tag push 時に作成・更新するため
 
 env:
   CARGO_TERM_COLOR: always
-  # D1 §3 で触れた当面の target。I7 で `sapphire` bin が
-  # 実体化するまでは `sapphire-lsp` を配送パイプラインの
-  # 通り道として使う（docs/impl/29-ci-cross-compile.md §暫定
-  # target）。
-  SAPPHIRE_RELEASE_BIN: sapphire-lsp
+  # I7 / I8 着地以降は `sapphire` CLI が first-class の配送対象。
+  # D2 期間で通り道として使っていた `sapphire-lsp` fallback は
+  # D3 で撤去（docs/impl/29-ci-cross-compile.md §暫定 target）。
+  SAPPHIRE_RELEASE_BIN: sapphire
 
 jobs:
   build:
@@ -59,41 +58,73 @@ jobs:
         # `rustup show` materialises it for this job.
         run: rustup show
 
+      - name: Resolve release version
+        # `[workspace.package].version` を単一の source-of-truth と
+        # する。tag push の場合は tag 名（`v` prefix を除去）と一致
+        # することが期待される（docs/impl/32-release-process.md §バー
+        # ジョン番号の整合）。ここでは Cargo 側を真と見なす。
+        # `cargo pkgid` は Windows / macOS / Linux いずれでも追加
+        # 依存なしに動く。出力形式は
+        # `path+file:///…/sapphire-compiler#0.1.0` なので `#` 以降を
+        # 取り出して version とする。
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgid=$(cargo pkgid --package sapphire-compiler)
+          # Split on the last '#'; what follows is either bare
+          # "X.Y.Z" (workspace packages) or "name@X.Y.Z" (published
+          # crates). Handle both by stripping an optional "name@".
+          suffix="${pkgid##*#}"
+          version="${suffix##*@}"
+          if [ -z "${version}" ] || [ "${version}" = "${pkgid}" ]; then
+            echo "failed to extract version from pkgid: ${pkgid}" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Resolved sapphire version: ${version}"
+
       - name: cargo build --release
         run: cargo build --release --bin ${{ env.SAPPHIRE_RELEASE_BIN }}
 
       - name: Stage artifact (Unix)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           bin="${SAPPHIRE_RELEASE_BIN}"
-          stage="dist/${bin}-${{ matrix.target }}"
+          name="${bin}-${{ matrix.target }}-${VERSION}"
+          stage="dist/${name}"
           mkdir -p "${stage}"
           cp "target/release/${bin}" "${stage}/${bin}"
           cp LICENSE "${stage}/LICENSE"
-          tar -czf "dist/${bin}-${{ matrix.target }}.tar.gz" -C dist "${bin}-${{ matrix.target }}"
-          (cd dist && shasum -a 256 "${bin}-${{ matrix.target }}.tar.gz" > "${bin}-${{ matrix.target }}.tar.gz.sha256")
+          tar -czf "dist/${name}.tar.gz" -C dist "${name}"
+          (cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256")
 
       - name: Stage artifact (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           $bin = "${env:SAPPHIRE_RELEASE_BIN}"
-          $stage = "dist/$bin-${{ matrix.target }}"
+          $name = "$bin-${{ matrix.target }}-${env:VERSION}"
+          $stage = "dist/$name"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item "target/release/$bin.exe" "$stage/$bin.exe"
           Copy-Item "LICENSE" "$stage/LICENSE"
-          $archive = "dist/$bin-${{ matrix.target }}.zip"
+          $archive = "dist/$name.zip"
           Compress-Archive -Path "$stage/*" -DestinationPath $archive -Force
           $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower()
-          "$hash  $bin-${{ matrix.target }}.zip" | Out-File -FilePath "$archive.sha256" -Encoding ascii
+          "$hash  $name.zip" | Out-File -FilePath "$archive.sha256" -Encoding ascii
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sapphire-${{ matrix.target }}
+          name: sapphire-${{ matrix.target }}-${{ steps.version.outputs.version }}
           path: |
             dist/*.tar.gz
             dist/*.tar.gz.sha256
@@ -101,3 +132,23 @@ jobs:
             dist/*.zip.sha256
           if-no-files-found: error
           retention-days: 14
+
+      - name: Attach artifact to GitHub Release
+        # tag push のときだけ発火（workflow_dispatch では
+        # upload-artifact のみで止める）。`softprops/action-gh-
+        # release@v2` は対象 tag の release を create-or-update し、
+        # 5 platform の matrix job がそれぞれ独立に発火しても同じ
+        # release へ asset が追加される（冪等）。`draft: true` で
+        # 作成しておき、release note と publish は user が手動で
+        # docs/impl/32-release-process.md §GitHub Release への
+        # upload 手順に沿って行う。
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.zip
+            dist/*.zip.sha256
+          fail_on_unmatched_files: true
+          draft: true

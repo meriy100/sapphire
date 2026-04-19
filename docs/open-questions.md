@@ -224,11 +224,11 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ13 | `runtime/` を Cargo workspace の member にすべきか | DEFERRED-IMPL | 現状 Rust workspace 外。`runtime/` は独立 Ruby gem として閉じ、I2 の Cargo workspace には含めない。D1（配布設計）で再訪。 |
 | I-OQ14 | R3 shape-driven marshalling での user record vs tagged ADT の曖昧性 | DEFERRED-IMPL | `{:tag, :values}` 2 キーの Hash は、user record（`{ tag: String, values: List Int }` 等）としても ADT としても有効な shape。R3 は **tagged-first** で倒した（ADT として解釈）。spec 10 §ADTs 末尾は「expected type で routing する」と規定するので、最終解消は型引数版 `to_ruby(value, type)` / `to_sapphire(value, type)` を R4 以降で導入した時点。`B-03-OQ2` の型エンコード決定と連動。 |
 | I-OQ15 | 高 arity ADT の ergonomic と Ruby キーワード引数（10-OQ7 連動） | DEFERRED-LATER | `ADT.define(mod, :Config, arity: 7)` のような高 arity コンストラクタは位置引数 7 つを並べる形になり、生成 Ruby コードを読む側にはつらい。10-OQ7 が `Struct` / `OpenStruct` wrap を提案しているが、Ruby 側 keyword arg（例: `mod.Config(host:, port:, ...)`）を許す拡張もあり得る。Sapphire 側は 04-OQ2 で位置引数のみと決まっているので、Ruby 側だけに生やす形の対称性に注意。最初の M9 通し後に再評価。 |
-| I-OQ29 | 単一 gem vs 複数 gem 構成 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §2。(A) 単一 `sapphire` + native gem、(B) メタ gem + `sapphire-compiler` + `sapphire-runtime`、(C) runtime gem のみ + CLI は別経路、の 3 案。draft は (A) を推奨、移行パスとして (C) を初回限定で採りうる。D2 の cross build 試行結果と user 判断で確定。 |
-| I-OQ30 | rb-sys 方式 vs 素の Rust binary 同梱方式 | DEFERRED-IMPL (D2 で確定) | `docs/impl/12-packaging.md` §3。Sapphire CLI は Ruby から FFI しない独立バイナリのため、Ruby ABI に縛られる `rb-sys` / native extension 方式（方式 Y）は合わない。素朴な `exe/sapphire` 同梱 platform gem（方式 X）を draft 採用。native extension が必要になる将来（LSP を Ruby プロセスに embed する設計変更が入った等）があれば再訪。 |
-| I-OQ31 | バイナリ署名 / SBOM の範囲 | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §6。gem の `--sign`、OIDC trusted publishers、sigstore 署名、`cargo auditable`、`cargo sbom` のどこまでを v0 で含めるか。draft は `--sign` 採用せず、trusted publisher で push、SBOM は D2 で判断。D3 着地前に確定。 |
+| I-OQ29 | 単一 gem vs 複数 gem 構成 | DECIDED (2026-04-19, D3) | `docs/impl/12-packaging.md` §2、`docs/impl/32-release-process.md`。最終射程は **(A) 単一 `sapphire` + `sapphire-runtime`**。0.1.0 は移行期間として (C) 形式（`sapphire-runtime` gem のみ rubygems.org、CLI は GitHub Release tarball 配布）を採る。(B) メタ gem 構成は非採用（運用対象 gem が増えるメリットが薄いため）。0.2.0 以降で CLI gem の `gem build --platform` × 5 → `gem push` を `release-build.yml` に編入し (A) へ完全移行する。 |
+| I-OQ30 | rb-sys 方式 vs 素の Rust binary 同梱方式 | DECIDED (2026-04-19, D3) | `docs/impl/12-packaging.md` §3、`docs/impl/29-ci-cross-compile.md`。**方式 X（素朴な Rust binary を gem の `exe/` に同梱、Ruby version 非依存）を採用**。`rb-sys` / native extension（方式 Y）は Sapphire CLI が Ruby から FFI で呼ばれないため動機なし、非採用。0.1.0 は 5 platform の native binary を GitHub Release tarball として配り、0.2.0 で `gem build --platform` 5 本に拡張する（I-OQ29 と連動）。 |
+| I-OQ31 | バイナリ署名 / SBOM の範囲 | DECIDED (2026-04-19, D3) | `docs/impl/12-packaging.md` §6、`docs/impl/32-release-process.md`。**0.1.0 では署名 / SBOM を一切導入しない**：gem の `--sign` は採用しない（legacy signing は MFA + trusted publisher の時代に価値が薄いため）、sigstore / cosign による artifact 署名も未導入、`cargo auditable` / `cargo sbom` も未導入。**OIDC trusted publisher も 0.1.0 では punt** し、rubygems アカウント MFA 必須化 + 手動 `gem push` で 0.1.0 を出す。0.2.0 以降で (1) trusted publisher、(2) sigstore、(3) `cargo auditable` + SBOM asset 同梱 の順に再評価する。 |
 | I-OQ32 | Windows の first-class / best-effort 線引き | DECIDED (2026-04-19, D2) | `docs/impl/12-packaging.md` §3 / §6、`docs/impl/29-ci-cross-compile.md`。**CI matrix：x86_64-pc-windows-msvc は first-class**（release-build.yml の matrix 入り、`windows-latest` native runner）。**aarch64-pc-windows-msvc は best-effort**（native arm64 Windows runner の一般提供前のため D2 matrix から除外。`cargo-zigbuild` による cross build の導入は M9 以降の拡張として保留）。gem の platform-native 配送（`x64-mingw-ucrt` 等）は I-OQ29 / I-OQ30 の決着と連動するため D3 まで引き続き DEFERRED-IMPL で残る。 |
-| I-OQ33 | CLI と runtime gem の version 一致ポリシー | DEFERRED-IMPL (D3 前に確定) | `docs/impl/12-packaging.md` §5。draft は「major.minor 一致、patch はズレ可（`add_runtime_dependency "sapphire-runtime", "~> X.Y.0"`）」。起動時 version check の厳格さ（warning vs error）も合わせて D3 前に確定。 |
+| I-OQ33 | CLI と runtime gem の version 一致ポリシー | DECIDED (2026-04-19, D3) | `docs/impl/12-packaging.md` §5、`docs/impl/32-release-process.md` §バージョン番号の整合。**「major.minor 一致、patch はズレ可」を正式採用**。実装位置は `crates/sapphire-compiler/src/codegen/mod.rs::RUNTIME_VERSION_CONSTRAINT`（`&str` 定数、現 `"~> 0.1"`）。生成 Ruby が起動時に `Sapphire::Runtime.require_version!(constraint)` を呼び、不整合なら `Sapphire::Runtime::Errors::RuntimeVersionMismatch` を **error として raise**（warning は採らない、I-OQ49 DECIDED と整合）。0.2.0 以降で minor を bump する際は `RUNTIME_VERSION_CONSTRAINT` / `runtime/lib/sapphire/runtime/version.rb` / `[workspace.package].version` の 3 箇所を同時に手で揃える（`build.rs` からの自動同期は I-OQ85 で punt）。 |
 | I-OQ34 | 同一行 block-opener の reference column 計算 | DEFERRED-IMPL | `let a = 1\n    b = 2\n  in a` のように `let` と最初の binding `a` が同一行にある場合、レイアウト解決は `a` の column を知らないと `b` を同一 statement として受けられない。現行実装は `resolve_with_source` がソースを受けて `column_of(byte_offset)` を都度計算する形。これは O(file_size) 的な最悪コストを持つ（現実的には無視できる）が、将来 LSP などインクリメンタル再解析をする場合は事前テーブル化を検討。代替は「ソースに依存せず `usize::MAX` を記録し next dedent で閉じる」挙動。これは `let a = 1 in a` のような 1 行 let では正しく動くが、multi-line 継続形（`let a = 1\n    b = 2`）では `;` が挿入されない。現実装は source を受け取れる場合は column を使い、受け取らない `resolve` 経由では MAX を使うハイブリッド。実装コンパイラ完成後の LSP 組み込み時に再評価。 |
 | I-OQ35 | `:=` Ruby 埋め込みの専用 TokenKind | DEFERRED-IMPL | 現行レキサは `:=` を `TokenKind::Op(":=")` として返し、パーサ側で文字列比較する。spec 02 §Reserved punctuation は `:=` を reserve しているので、専用の `TokenKind::ColonEquals` を追加した方が clean。追加は monotonic（既存コード破壊なし）なので I5 以降いつでも入れ替え可。今は lexer の変更を最小化した。 |
 | I-OQ36 | infix-LHS method clause の射程 | DEFERRED-IMPL | `class Eq a where\n  x == y = not (x /= y)` のような `pat op pat = body` 形の default method clause を、パーサ段では左辺 apat が `Var` / `Wildcard` / 他のどれかに関わらず単純に「operator を見たら infix-LHS」と解釈する。spec 07 §Abstract syntax は「`(op)` の method に対する便宜記法」と位置付けているので、実質 `Var op Var = body` だけを通す方が忠実。I5（name resolution）で method 名を class membership に照らす際に追加検証する想定で、パーサは緩く通す。 |
@@ -445,5 +445,19 @@ Scheme>` projection を追加し prelude operator / user class method
 のスキーム表示を修復したのに伴い、**I-OQ100**（`HoverTypes` の
 projection 戦略）を §1.5 に追加。`DEFERRED-IMPL`、I-OQ57 着地時に
 projection 継続か `Arc<InferCtx>` 移行かを判断する。
+
+2026-04-19（D3 タスク、`docs/impl/32-release-process.md`）で、
+初回リリース 0.1.0 の準備に伴い **I-OQ29 / I-OQ30 / I-OQ31 /
+I-OQ33** を `DEFERRED-IMPL` から `DECIDED (2026-04-19, D3)` へ
+昇格した。I-OQ29 は **(A) 単一 `sapphire` + `sapphire-runtime`**
+を最終射程としつつ 0.1.0 は (C) 移行期形式で出す、I-OQ30 は
+**方式 X（素の Rust binary 同梱）** を採用、I-OQ31 は **0.1.0 で
+は署名・SBOM・trusted publisher をいずれも入れない**（0.2.0 以降
+で再評価）、I-OQ33 は **`RUNTIME_VERSION_CONSTRAINT` 定数を source
+of truth とする major.minor 一致ポリシー** を正式採用。I-OQ78
+（VSCode 拡張 marketplace）は 0.1.0 では解消せず、`package.json`
+の `publisher` を placeholder のまま残す運用で `DEFERRED-IMPL`
+を継続（0.2.0 以降で user 判断）。I-OQ11（ライセンス dual 化）
+も 0.1.0 は MIT 単独で発行するため `OPEN` のまま継続。
 
 新しく OPEN が発生したらここで列挙する運用。
