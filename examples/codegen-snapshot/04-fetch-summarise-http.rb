@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 #
-# Generated from module Http by sapphire-compiler 0.0.0.
+# Generated from module Http by sapphire-compiler 0.1.0.
 # Targets sapphire-runtime ~> 0.1. Do not edit by hand.
 # See docs/build/02-source-and-output-layout.md for the output contract.
 
