@@ -108,6 +108,72 @@ impl<'a> LineMap<'a> {
         }
     }
 
+    /// Convert an LSP [`Position`] back into a byte offset into the
+    /// source buffer. Returns `None` if `pos.line` is past the last
+    /// line (a bug-shaped input we refuse rather than silently
+    /// absorbing).
+    ///
+    /// The LSP spec allows clients to send a `character` value that
+    /// sits past the line's end; that case **clamps** to the line-
+    /// end byte (just before the `\n` / `\r\n`, or the source's
+    /// length for the last line). A position in the middle of a
+    /// UTF-16 surrogate pair is **snapped** to the start byte of
+    /// that codepoint; `byte_offset` never returns an offset that
+    /// splits a codepoint.
+    ///
+    /// The returned offset is guaranteed to sit on a UTF-8 char
+    /// boundary so slicing with it is always safe.
+    pub fn byte_offset(&self, pos: Position) -> Option<usize> {
+        let line_idx = pos.line as usize;
+        if line_idx >= self.line_starts.len() {
+            return None;
+        }
+        let line_start = self.line_starts[line_idx];
+        // End of the line's content: the byte before the next
+        // line-start (or end of source for the last line). Do not
+        // include the `\n` (or the `\r\n` pair) in the walkable
+        // region: `character` counts into the line, not across it.
+        let line_end_excl = if line_idx + 1 < self.line_starts.len() {
+            let next_start = self.line_starts[line_idx + 1];
+            // next_start is 1 past the `\n`. Trim the `\n` and, if
+            // the preceding byte is `\r`, trim that too.
+            let mut e = next_start - 1;
+            if e > line_start && self.source.as_bytes()[e - 1] == b'\r' {
+                e -= 1;
+            }
+            e
+        } else {
+            self.source.len()
+        };
+
+        // Walk the line codepoint-by-codepoint accumulating UTF-16
+        // units until we reach `pos.character` or the end of the
+        // line. Clamp (rather than fail) when `character` points
+        // past the line's content — LSP clients sometimes send
+        // column == line_length for end-of-line positions.
+        let target = pos.character as usize;
+        let line = &self.source[line_start..line_end_excl];
+        let mut utf16_used = 0usize;
+        let mut byte_in_line = 0usize;
+        for c in line.chars() {
+            if utf16_used >= target {
+                break;
+            }
+            let cu = c.len_utf16();
+            if utf16_used + cu > target {
+                // `target` fell in the middle of a surrogate pair.
+                // Snap to the codepoint boundary (do not split it);
+                // this matches how `position(byte_offset(pos))`
+                // rounds trips back to the nearest representable
+                // position.
+                break;
+            }
+            utf16_used += cu;
+            byte_in_line += c.len_utf8();
+        }
+        Some(line_start + byte_in_line)
+    }
+
     /// Raw line-start offsets, exposed for tests.
     #[cfg(test)]
     pub(crate) fn line_starts(&self) -> &[usize] {
@@ -124,7 +190,12 @@ pub fn build_line_map(source: &str) -> LineMap<'_> {
 
 /// Count UTF-16 code units in `s`. Mirrors `str::encode_utf16().count()`
 /// but avoids allocating an iterator state struct per call.
-fn utf16_len(s: &str) -> usize {
+///
+/// Exposed publicly so sibling modules (incremental sync, future
+/// tooling) can share the same counting rule as [`LineMap`]. See
+/// `docs/impl/21-lsp-incremental-sync.md` for where this crosses the
+/// module boundary.
+pub fn utf16_len(s: &str) -> usize {
     let mut n = 0;
     for c in s.chars() {
         // Non-BMP code points take two UTF-16 code units.
@@ -335,5 +406,102 @@ mod tests {
         let r = map.range(Span::empty(2));
         assert_eq!(r.start, Position::new(0, 2));
         assert_eq!(r.end, Position::new(0, 2));
+    }
+
+    #[test]
+    fn byte_offset_ascii_round_trip() {
+        // Byte → Position → Byte should be the identity on ASCII.
+        let src = "hello\nworld";
+        let map = build_line_map(src);
+        for byte in 0..=src.len() {
+            let pos = map.position(byte);
+            let back = map.byte_offset(pos).expect("in-range");
+            assert_eq!(back, byte, "round trip broke at {byte}");
+        }
+    }
+
+    #[test]
+    fn byte_offset_bmp_multibyte_round_trip() {
+        // `é` = 2 UTF-8 bytes, 1 UTF-16 unit. Every char boundary
+        // up to `src.len()` (inclusive) must round-trip.
+        let src = "é=1\nxy";
+        let map = build_line_map(src);
+        for &byte in &[0usize, 2, 3, 4, 5, 6, 7] {
+            let pos = map.position(byte);
+            assert_eq!(map.byte_offset(pos), Some(byte), "byte={byte}");
+        }
+    }
+
+    #[test]
+    fn byte_offset_supplementary_round_trip() {
+        // U+1F600 is 4 UTF-8 bytes, 2 UTF-16 units. Every whole
+        // codepoint boundary must round-trip.
+        let src = "\u{1F600}x\n\u{1F600}y";
+        let map = build_line_map(src);
+        let boundaries = [0usize, 4, 5, 6, 10, 11];
+        for &byte in &boundaries {
+            let pos = map.position(byte);
+            assert_eq!(map.byte_offset(pos), Some(byte), "byte={byte}");
+        }
+    }
+
+    #[test]
+    fn byte_offset_inside_surrogate_snaps_down() {
+        // Asking for the "middle" of a surrogate pair returns the
+        // codepoint's start offset (we do not split codepoints).
+        let src = "\u{1F600}x";
+        let map = build_line_map(src);
+        // Character = 1 lands inside the U+1F600 surrogate pair.
+        assert_eq!(map.byte_offset(Position::new(0, 1)), Some(0));
+    }
+
+    #[test]
+    fn byte_offset_past_line_end_clamps_to_eol() {
+        let src = "abc\ndef";
+        let map = build_line_map(src);
+        // line 0 has 3 content chars; character=999 should land at
+        // the byte just before the `\n` (byte 3).
+        assert_eq!(map.byte_offset(Position::new(0, 999)), Some(3));
+        // Last line: clamp to source end.
+        assert_eq!(map.byte_offset(Position::new(1, 999)), Some(7));
+    }
+
+    #[test]
+    fn byte_offset_line_past_eof_is_none() {
+        let src = "abc\n";
+        let map = build_line_map(src);
+        // Two lines: [0, 4] → indices 0 and 1 valid; 2 is OOB.
+        assert!(map.byte_offset(Position::new(2, 0)).is_none());
+    }
+
+    #[test]
+    fn byte_offset_handles_crlf_line_end() {
+        // `\r\n` counts as one line break. character past the line
+        // end must clamp just before the `\r`.
+        let src = "ab\r\ncd";
+        let map = build_line_map(src);
+        // Line 0 has "ab" (2 UTF-16 units). `\r` is not a character.
+        assert_eq!(map.byte_offset(Position::new(0, 2)), Some(2));
+        assert_eq!(map.byte_offset(Position::new(0, 999)), Some(2));
+        // Line 1 starts after `\r\n` → byte 4.
+        assert_eq!(map.byte_offset(Position::new(1, 0)), Some(4));
+        assert_eq!(map.byte_offset(Position::new(1, 2)), Some(6));
+    }
+
+    #[test]
+    fn byte_offset_empty_source() {
+        let map = build_line_map("");
+        assert_eq!(map.byte_offset(Position::new(0, 0)), Some(0));
+        assert_eq!(map.byte_offset(Position::new(0, 5)), Some(0));
+        assert!(map.byte_offset(Position::new(1, 0)).is_none());
+    }
+
+    #[test]
+    fn utf16_len_counts_bmp_and_supplementary() {
+        assert_eq!(utf16_len(""), 0);
+        assert_eq!(utf16_len("abc"), 3);
+        assert_eq!(utf16_len("é"), 1);
+        assert_eq!(utf16_len("\u{1F600}"), 2);
+        assert_eq!(utf16_len("a\u{1F600}b"), 4);
     }
 }

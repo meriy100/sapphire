@@ -1,20 +1,34 @@
-//! `tower-lsp` server implementation for Sapphire (L2 diagnostics).
+//! `tower-lsp` server implementation for Sapphire (L3 incremental
+//! document sync).
 //!
-//! The server now wires enough of the protocol to publish parser /
+//! The server now wires enough of the protocol to keep an
+//! incrementally updated in-memory buffer and publish parser /
 //! lexer / layout diagnostics back to the editor:
 //!
 //! - `initialize` / `initialized` / `shutdown` respond with the
 //!   minimum required by LSP 3.17.
+//! - `initialize` now advertises `TextDocumentSyncKind::INCREMENTAL`
+//!   (upgraded from `Full` at L2). Clients may still fall back to a
+//!   whole-document replacement by sending a change with no `range`,
+//!   which the server handles transparently.
 //! - `textDocument/didOpen` / `didChange` / `didClose` drive an
-//!   in-memory [`Document`] store keyed by `Url`. Every open or
-//!   change runs the `sapphire_compiler::analyze` pipeline and
-//!   publishes the resulting diagnostics via
+//!   in-memory [`Document`] store keyed by `Url`. Each `didChange`
+//!   applies the incremental edits via [`crate::edit::apply_change`],
+//!   stores the updated buffer, runs the `sapphire_compiler::analyze`
+//!   pipeline, and publishes the resulting diagnostics via
 //!   `textDocument/publishDiagnostics`. A `didClose` publishes an
 //!   empty diagnostic set so stale markers disappear in the client.
+//! - Document version monotonicity — LSP 3.17 mandates strictly
+//!   increasing versions from the client. The store rejects
+//!   `didChange` notifications whose version is not strictly greater
+//!   than the stored one, and publishing is gated so a stale analysis
+//!   cannot overwrite a newer one's diagnostics.
 //!
 //! Richer capabilities (hover, goto-def, completion, …) land in
-//! Track L's later milestones. Incremental sync is deferred as
-//! I-OQ9; every change runs a full reparse for now.
+//! Track L's later milestones. Reparse strategy stays full-reparse
+//! even though text sync is incremental; see
+//! `docs/impl/21-lsp-incremental-sync.md` §Why split text-sync from
+//! reparse.
 
 use dashmap::DashMap;
 use sapphire_compiler::analyze::{AnalysisResult, analyze};
@@ -23,11 +37,13 @@ use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
     Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
     InitializeParams, InitializeResult, InitializedParams, MessageType, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    ServerInfo, TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind,
+    Url,
 };
 use tower_lsp::{Client, LanguageServer};
 
 use crate::diagnostics::{build_line_map, compile_error_to_diagnostic};
+use crate::edit::{ApplyError, apply_change};
 
 /// A single open text document as the server sees it.
 ///
@@ -74,7 +90,7 @@ impl SapphireLanguageServer {
         InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
+                    TextDocumentSyncKind::INCREMENTAL,
                 )),
                 ..ServerCapabilities::default()
             },
@@ -96,23 +112,36 @@ impl SapphireLanguageServer {
         compile_errors_to_diagnostics(&errors, text)
     }
 
-    /// Update the document store and publish the resulting
-    /// diagnostics. Called from `did_open` / `did_change`.
+    /// Apply a sequence of incremental `didChange` edits on top of
+    /// `existing` and return the resulting buffer plus any per-change
+    /// error. Exposed for tests so the `did_change` race guard can
+    /// stay in `refresh_incremental`.
     ///
-    /// Order of operations is important: we insert into the document
-    /// store **before** running analysis so a concurrent `did_change`
-    /// cannot write back an older version on top of ours. We also
-    /// check the stored version before publishing — if a newer change
-    /// arrived while we were parsing, drop the stale diagnostics and
-    /// let the newer `refresh` call publish its own.
-    async fn refresh(&self, uri: Url, text: String, version: i32) {
-        self.documents.insert(
-            uri.clone(),
-            Document {
-                text: text.clone(),
-                version,
-            },
-        );
+    /// Each change is applied in order; the first [`ApplyError`]
+    /// aborts the batch and the partially mutated buffer is returned
+    /// alongside the error (the caller decides whether to commit
+    /// anyway). See `docs/impl/21-lsp-incremental-sync.md`
+    /// §Error handling for the rationale.
+    pub fn apply_changes(
+        existing: &str,
+        changes: &[TextDocumentContentChangeEvent],
+    ) -> (String, Option<ApplyError>) {
+        let mut buf = existing.to_owned();
+        for change in changes {
+            if let Err(e) = apply_change(&mut buf, change) {
+                return (buf, Some(e));
+            }
+        }
+        (buf, None)
+    }
+
+    /// Run analysis against `text` and publish diagnostics for
+    /// `(uri, version)` — but only if `version` still matches the
+    /// currently stored version for `uri`. If a newer `did_change`
+    /// landed while analysis was running, the newer refresh will
+    /// publish its own diagnostics; publishing stale ones here would
+    /// race the LSP "latest wins" contract.
+    async fn analyze_and_publish(&self, uri: Url, text: String, version: i32) {
         let diagnostics = Self::diagnostics_for(&text);
         let still_current = self
             .documents
@@ -120,14 +149,104 @@ impl SapphireLanguageServer {
             .map(|entry| entry.version == version)
             .unwrap_or(false);
         if !still_current {
-            // A newer change landed during analysis; skip publishing
-            // these diagnostics — the newer refresh will publish its
-            // own, and LSP requires the latest to win.
+            tracing::debug!(
+                uri = %uri,
+                version,
+                "dropping stale diagnostics; newer version in store",
+            );
             return;
         }
         self.client
             .publish_diagnostics(uri, diagnostics, Some(version))
             .await;
+    }
+
+    /// Open-path refresh: the client sent us a whole document and a
+    /// starting version. Stored unconditionally (open replaces any
+    /// previous state for the same URI).
+    async fn refresh_full(&self, uri: Url, text: String, version: i32) {
+        self.documents.insert(
+            uri.clone(),
+            Document {
+                text: text.clone(),
+                version,
+            },
+        );
+        self.analyze_and_publish(uri, text, version).await;
+    }
+
+    /// Incremental-path refresh: apply `changes` on top of the
+    /// currently stored buffer, store the new `(text, version)`,
+    /// and publish diagnostics if we are still the latest writer.
+    ///
+    /// Monotonicity guard: if the current stored version is already
+    /// ≥ `version` the batch is dropped. LSP 3.17 §TextDocumentItem
+    /// requires clients to send strictly increasing versions on
+    /// `didChange`; seeing an older version here is a client bug
+    /// or a late reorder we must not "undo" by writing back.
+    async fn refresh_incremental(
+        &self,
+        uri: Url,
+        changes: Vec<TextDocumentContentChangeEvent>,
+        version: i32,
+    ) {
+        // Pull the current buffer out of the store. If we have no
+        // record of this URI the client has sent `didChange`
+        // without a prior `didOpen` — the LSP spec forbids this,
+        // but we fall back to an empty buffer so a misbehaving
+        // client does not hang the server.
+        let starting_text = match self.documents.get(&uri) {
+            Some(entry) => {
+                if entry.version >= version {
+                    tracing::warn!(
+                        uri = %uri,
+                        stored = entry.version,
+                        incoming = version,
+                        "dropping didChange: version not strictly increasing",
+                    );
+                    return;
+                }
+                entry.text.clone()
+            }
+            None => {
+                tracing::warn!(
+                    uri = %uri,
+                    version,
+                    "didChange for document we never saw a didOpen for; treating as empty"
+                );
+                String::new()
+            }
+        };
+
+        let (new_text, err) = Self::apply_changes(&starting_text, &changes);
+        if let Some(e) = err {
+            tracing::warn!(uri = %uri, error = %e, "apply_change failed; dropping remaining changes in batch");
+        }
+
+        // Commit the new buffer + version. Do this *before* running
+        // analysis so a concurrent `did_change` sees our write and
+        // does not racily write an older version back on top.
+        self.documents.insert(
+            uri.clone(),
+            Document {
+                text: new_text.clone(),
+                version,
+            },
+        );
+        // Monotonicity invariant: whatever is stored after our
+        // insert must be at least our version. A concurrent newer
+        // writer is allowed to bump it further; a stale write must
+        // never land below us. `analyze_and_publish` will drop our
+        // diagnostics if the store moved past `version`.
+        debug_assert!(
+            self.documents
+                .get(&uri)
+                .map(|e| e.version >= version)
+                .unwrap_or(false),
+            "post-insert version regressed for {uri}"
+        );
+
+        self.analyze_and_publish(uri, new_text, version).await;
     }
 }
 
@@ -169,27 +288,21 @@ impl LanguageServer for SapphireLanguageServer {
             language = %params.text_document.language_id,
             "textDocument/didOpen",
         );
-        self.refresh(uri, params.text_document.text, version).await;
+        self.refresh_full(uri, params.text_document.text, version)
+            .await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
         let uri = params.text_document.uri.clone();
         let version = params.text_document.version;
-        tracing::info!(
+        tracing::trace!(
             uri = %uri,
             version,
             changes = params.content_changes.len(),
-            "textDocument/didChange",
+            "textDocument/didChange range-based",
         );
-        // We advertise TextDocumentSyncKind::Full, so the client
-        // always sends a single content change with the complete
-        // document text. Pick the last one defensively (the spec
-        // permits multiple entries; the last one is the final state
-        // for Full sync).
-        let Some(change) = params.content_changes.into_iter().next_back() else {
-            return;
-        };
-        self.refresh(uri, change.text, version).await;
+        self.refresh_incremental(uri, params.content_changes, version)
+            .await;
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
@@ -205,14 +318,40 @@ impl LanguageServer for SapphireLanguageServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tower_lsp::lsp_types::{DiagnosticSeverity, NumberOrString};
+    use tower_lsp::lsp_types::{DiagnosticSeverity, NumberOrString, Position, Range};
 
-    /// Smoke test: `initialize_result` advertises the L1 capability
-    /// surface (Full text-document sync, named `sapphire-lsp` with
-    /// the crate version). This guards the invariant tested via
-    /// `LanguageServer::initialize` without needing a mock client.
+    fn change_full(text: &str) -> TextDocumentContentChangeEvent {
+        TextDocumentContentChangeEvent {
+            range: None,
+            range_length: None,
+            text: text.to_owned(),
+        }
+    }
+
+    fn change_range(
+        sl: u32,
+        sc: u32,
+        el: u32,
+        ec: u32,
+        text: &str,
+    ) -> TextDocumentContentChangeEvent {
+        TextDocumentContentChangeEvent {
+            range: Some(Range {
+                start: Position::new(sl, sc),
+                end: Position::new(el, ec),
+            }),
+            range_length: None,
+            text: text.to_owned(),
+        }
+    }
+
+    /// Smoke test: `initialize_result` advertises the L3 capability
+    /// surface (Incremental text-document sync, named `sapphire-lsp`
+    /// with the crate version). This guards the invariant tested
+    /// via `LanguageServer::initialize` without needing a mock
+    /// client.
     #[tokio::test]
-    async fn initialize_result_is_minimal_and_named() {
+    async fn initialize_result_advertises_incremental_sync() {
         let result = SapphireLanguageServer::initialize_result();
 
         let info = result.server_info.expect("server_info present");
@@ -221,9 +360,9 @@ mod tests {
 
         match result.capabilities.text_document_sync {
             Some(TextDocumentSyncCapability::Kind(kind)) => {
-                assert_eq!(kind, TextDocumentSyncKind::FULL);
+                assert_eq!(kind, TextDocumentSyncKind::INCREMENTAL);
             }
-            other => panic!("expected Full text-document sync, got {other:?}"),
+            other => panic!("expected Incremental text-document sync, got {other:?}"),
         }
     }
 
@@ -265,5 +404,49 @@ x = 1
             diags[0].code,
             Some(NumberOrString::String("sapphire/parse-error".to_owned()))
         );
+    }
+
+    #[test]
+    fn apply_changes_full_replacement() {
+        let (buf, err) = SapphireLanguageServer::apply_changes("old", &[change_full("new")]);
+        assert!(err.is_none());
+        assert_eq!(buf, "new");
+    }
+
+    #[test]
+    fn apply_changes_two_inserts_compose() {
+        // Starting buffer: "" — insert "hello" then " world".
+        let (buf, err) = SapphireLanguageServer::apply_changes(
+            "",
+            &[
+                change_range(0, 0, 0, 0, "hello"),
+                change_range(0, 5, 0, 5, " world"),
+            ],
+        );
+        assert!(err.is_none());
+        assert_eq!(buf, "hello world");
+    }
+
+    #[test]
+    fn apply_changes_mixed_full_then_range() {
+        // Range=None clears the buffer, then a subsequent edit runs
+        // against the replacement.
+        let (buf, err) = SapphireLanguageServer::apply_changes(
+            "stale",
+            &[change_full("abc"), change_range(0, 1, 0, 2, "X")],
+        );
+        assert!(err.is_none());
+        assert_eq!(buf, "aXc");
+    }
+
+    #[test]
+    fn apply_changes_first_error_aborts_batch() {
+        // Second edit is out-of-range; first still applies.
+        let (buf, err) = SapphireLanguageServer::apply_changes(
+            "abc",
+            &[change_range(0, 1, 0, 2, "X"), change_range(9, 0, 9, 0, "Y")],
+        );
+        assert_eq!(buf, "aXc");
+        assert_eq!(err, Some(ApplyError::StartOutOfRange));
     }
 }
