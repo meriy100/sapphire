@@ -10,3 +10,7 @@ authors.workspace = true
 
 [dependencies]
 sapphire-core = { path = "../sapphire-core" }
+
+[[bin]]
+name = "sapphire"
+path = "src/bin/sapphire.rs"
