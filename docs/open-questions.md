@@ -220,6 +220,8 @@ DEFERRED-IMPL / DEFERRED-LATER / — (済)` にマッピングしている。
 | I-OQ9 | LSP のインクリメンタル計算基盤 | DEFERRED-IMPL | L3 は naive 再解析で開始。将来 Salsa 等を導入する段階で同期モデル（`lsp-server`）への乗せ替えも含め再評価。`07-lsp-stack.md` 参照。 |
 | I-OQ10 | LSP の transport 抽象 | DEFERRED-LATER | 初回は stdin/stdout のみ。TCP / pipe は VSCode 以外のエディタ対応時（本フェーズ外）に再検討。`07-lsp-stack.md` 参照。 |
 | I-OQ11 | ライセンス dual 化 | OPEN | MIT 単独を維持するか、Rust 生態系慣例の `MIT OR Apache-2.0` dual に切り替えるか。I2 では既存 MIT を維持。user 判断待ち。詳細は `docs/impl/06-scaffolding.md` §ライセンス。 |
+| I-OQ12 | `sapphire-runtime` 側 Ruby formatter / linter 採否 | DEFERRED-IMPL | R1 では rubocop / standard-ruby を導入せず scaffold を最小化。`docs/impl/08-runtime-layout.md` §Rubocop / formatter。R2（ADT 実装）着地時に再評価。 |
+| I-OQ13 | `runtime/` を Cargo workspace の member にすべきか | DEFERRED-IMPL | 現状 Rust workspace 外。`runtime/` は独立 Ruby gem として閉じ、I2 の Cargo workspace には含めない。D1（配布設計）で再訪。 |
 
 ## 2. ビルド戦略由来 (docs/build/)
 
