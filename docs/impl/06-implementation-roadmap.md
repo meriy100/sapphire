@@ -134,24 +134,24 @@ Start ── I2 ──┬── I3 Lex ── I4 Parser ── I5 NameRes ──
 | 3 | `impl/s1-spec-cleanup` | **S1** 🟢 |
 | 4 | `impl/l0-lsp-selection` | **L0** 🟢 |
 
-### ウェーブ 2（I2/R1/L0/S1 着地後）🟡 **進行中（2026-04-19〜）**
+### ウェーブ 2（I2/R1/L0/S1 着地後）🟢 **完了（2026-04-19）**
 
 | # | worktree branch | タスク |
 |---|---|---|
-| 1 | `impl/i3-lexer` | **I3** レキサ 🟡 |
-| 2 | `impl/r2-r3-runtime` | **R2** ADT helpers → **R3** Marshalling（順次） 🟡 |
-| 3 | `impl/l1-lsp-scaffold` | **L1** LSP protocol scaffold 🟡 |
-| 4 | `impl/t2a-tutorial-ch5` | **T2a** tutorial ch5 🟡 |
-| 5 | `impl/d1-packaging` | **D1** gem packaging 調査 🟡 |
+| 1 | `impl/i3-lexer` | **I3** レキサ 🟢 |
+| 2 | `impl/r2-r3-runtime` | **R2** ADT helpers → **R3** Marshalling 🟢 |
+| 3 | `impl/l1-lsp-scaffold` | **L1** LSP protocol scaffold 🟢 |
+| 4 | `impl/t2a-tutorial-ch5` | **T2a** tutorial ch5 🟢 |
+| 5 | `impl/d1-packaging` | **D1** gem packaging 調査 🟢 |
 
-### ウェーブ 3（I3 着地後）
+### ウェーブ 3（I3 着地後）🟡 **進行中（2026-04-19〜）**
 
-| # | タスク |
-|---|---|
-| 1 | **I4** パーサ + AST |
-| 2 | **R4** Ruby monad primitives |
-| 3 | **L2** parse-error diagnostics |
-| 4 | **T2b** tutorial ch6 |
+| # | worktree branch | タスク |
+|---|---|---|
+| 1 | `impl/i4-parser` | **I4** パーサ + AST 🟡 |
+| 2 | `impl/r4-ruby-monad` | **R4** Ruby monad primitives 🟡 |
+| 3 | `impl/t2b-tutorial-ch6` | **T2b** tutorial ch6 🟡 |
+| 4 | （I4 着地後） | **L2** parse-error diagnostics ⬜ |
 
 ### ウェーブ 4（I4 着地後）
 
