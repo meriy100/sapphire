@@ -26,7 +26,7 @@ Closes:
 - 02 OQ 2 (unary minus) — unary `-` is surface sugar for `negate`.
 - 02 OQ 3 (operator table) — fixed Elm-style table; user-declarable
   fixity is re-posed as 05 OQ 3.
-- 02 OQ 6 (`::` disambiguation) — `::` is list cons (to be realized
+- 02 OQ 4 (`::` disambiguation) — `::` is list cons (to be realized
   in M6); pattern-level type annotation uses a different spelling,
   fixed by document 06 as `(pat : type)`.
 
@@ -120,6 +120,12 @@ grouping is the usual precedence-climbing behaviour.
 Every operator at this layer is **monomorphic**. In particular,
 `==` and `/=` are typed `Int -> Int -> Bool` only. Extending them
 (and the ordering comparisons) to further types is 05 OQ 2.
+
+Exponentiation (`^` / `**`) is **not** included in the operator
+table. Users write iterated multiplication, or a later prelude
+function, as needed. Adding a dedicated operator would pre-commit
+to a precedence tier and an integer / float interaction story
+before the numeric tower itself is settled (05 OQ 1).
 
 ## Unary minus
 
@@ -288,7 +294,3 @@ pattern-level type annotation in typical Sapphire programs.
 5. **Pipe operators.** Elm's `|>` (left-to-right) and `<|`
    (right-to-left). Useful; deferred to avoid overloading this
    document. Would be a natural tier-0 / tier-1 right/left entry.
-
-6. **Exponentiation `^`.** Include `^ : Int -> Int -> Int` at a
-   higher tier than `*`? Draft omits it; users write iterated
-   multiplication or a prelude function.
