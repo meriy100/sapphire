@@ -85,7 +85,13 @@ pub fn find_definition(
 /// both the `BinOp` and the enclosing `App` if any, and we want the
 /// innermost — which is also what the I5 side table stores for the
 /// operator itself.
-fn find_reference_span(references: &HashMap<Span, Resolution>, byte_offset: usize) -> Option<Span> {
+///
+/// Exposed at crate visibility so the L4 hover module can share the
+/// same reference-site lookup without re-implementing it.
+pub(crate) fn find_reference_span(
+    references: &HashMap<Span, Resolution>,
+    byte_offset: usize,
+) -> Option<Span> {
     let mut best: Option<Span> = None;
     for &span in references.keys() {
         if span_contains(span, byte_offset) {

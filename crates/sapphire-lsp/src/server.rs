@@ -24,9 +24,12 @@
 //!   than the stored one, and publishing is gated so a stale analysis
 //!   cannot overwrite a newer one's diagnostics.
 //!
-//! Richer capabilities (hover, goto-def, completion, …) land in
-//! Track L's later milestones. Reparse strategy stays full-reparse
-//! even though text sync is incremental; see
+//! L4 adds `textDocument/hover`: the handler runs analyze →
+//! resolve → typeck and returns a Markdown tooltip with the
+//! inferred scheme for the identifier under the cursor. See
+//! `docs/impl/28-lsp-hover.md` for the design notes. Completion
+//! lands in a later Track L milestone. Reparse strategy stays
+//! full-reparse even though text sync is incremental; see
 //! `docs/impl/21-lsp-incremental-sync.md` §Why split text-sync from
 //! reparse.
 
@@ -37,15 +40,17 @@ use sapphire_compiler::resolver::resolve;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
     Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    GotoDefinitionParams, GotoDefinitionResponse, InitializeParams, InitializeResult,
-    InitializedParams, Location, MessageType, OneOf, Position, ServerCapabilities, ServerInfo,
-    TextDocumentContentChangeEvent, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
+    InitializeParams, InitializeResult, InitializedParams, Location, MessageType, OneOf, Position,
+    ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent, TextDocumentSyncCapability,
+    TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, LanguageServer};
 
 use crate::definition::find_definition;
 use crate::diagnostics::{build_line_map, compile_error_to_diagnostic};
 use crate::edit::{ApplyError, apply_change};
+use crate::hover::{collect_hover_types, find_hover_info};
 
 /// A single open text document as the server sees it.
 ///
@@ -100,6 +105,11 @@ impl SapphireLanguageServer {
                 // `docs/impl/22-lsp-goto-definition.md` for the
                 // rationale.
                 definition_provider: Some(OneOf::Left(true)),
+                // L4: advertise `textDocument/hover` support. The
+                // handler runs analyze → resolve → typeck and
+                // returns a Markdown-formatted type scheme tooltip.
+                // See `docs/impl/28-lsp-hover.md`.
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..ServerCapabilities::default()
             },
             server_info: Some(ServerInfo {
@@ -138,6 +148,30 @@ impl SapphireLanguageServer {
             uri: uri.clone(),
             range,
         })
+    }
+
+    /// Resolve a `(uri, position)` pair into an LSP [`Hover`] by
+    /// running the front-end + resolver + typeck pipeline over the
+    /// stored buffer. Exposed as a pure `&self` helper so tests can
+    /// exercise the lookup without spinning up a real LSP client.
+    ///
+    /// Returns `None` when the document is not in the store, when
+    /// `analyze` fails, when the resolver fails to produce a module
+    /// env, or when the position does not rest on a recognised
+    /// reference site. Typecheck errors are tolerated — partial
+    /// scheme info is still useful for hover, so we do not gate the
+    /// tooltip on a clean compile. See `docs/impl/28-lsp-hover.md`
+    /// §Scope for the full rationale.
+    pub fn resolve_position_to_hover(&self, uri: &Url, position: Position) -> Option<Hover> {
+        let text = self.documents.get(uri).map(|e| e.text.clone())?;
+        let analysis = analyze(&text);
+        let module = analysis.module?;
+        let resolved = resolve(module.clone()).ok()?;
+        let module_name = resolved.env.id.display();
+        let typed = collect_hover_types(&module_name, &module);
+        let line_map = build_line_map(&text);
+        let byte_offset = line_map.byte_offset(position)?;
+        find_hover_info(&module, &resolved, &typed, &text, byte_offset, &line_map)
     }
 
     /// Run the front-end pipeline over `text` and project the
@@ -374,6 +408,22 @@ impl LanguageServer for SapphireLanguageServer {
         };
         Ok(Some(GotoDefinitionResponse::Scalar(location)))
     }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let uri = params
+            .text_document_position_params
+            .text_document
+            .uri
+            .clone();
+        let position = params.text_document_position_params.position;
+        tracing::trace!(
+            uri = %uri,
+            line = position.line,
+            character = position.character,
+            "textDocument/hover",
+        );
+        Ok(self.resolve_position_to_hover(&uri, position))
+    }
 }
 
 #[cfg(test)]
@@ -406,11 +456,11 @@ mod tests {
         }
     }
 
-    /// Smoke test: `initialize_result` advertises the L3 capability
-    /// surface (Incremental text-document sync, named `sapphire-lsp`
-    /// with the crate version). This guards the invariant tested
-    /// via `LanguageServer::initialize` without needing a mock
-    /// client.
+    /// Smoke test: `initialize_result` advertises the L3 / L4 / L5
+    /// capability surface (Incremental text-document sync, hover
+    /// provider, definition provider, named `sapphire-lsp` with the
+    /// crate version). This guards the invariants tested via
+    /// `LanguageServer::initialize` without needing a mock client.
     #[tokio::test]
     async fn initialize_result_advertises_incremental_sync() {
         let result = SapphireLanguageServer::initialize_result();
@@ -424,6 +474,13 @@ mod tests {
                 assert_eq!(kind, TextDocumentSyncKind::INCREMENTAL);
             }
             other => panic!("expected Incremental text-document sync, got {other:?}"),
+        }
+
+        // L4: `textDocument/hover` advertised as a boolean
+        // capability (no server-side registration options yet).
+        match result.capabilities.hover_provider {
+            Some(HoverProviderCapability::Simple(true)) => {}
+            other => panic!("expected Simple(true) hover_provider, got {other:?}"),
         }
     }
 
