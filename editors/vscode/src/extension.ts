@@ -19,7 +19,6 @@ import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
-  TransportKind,
 } from "vscode-languageclient/node";
 
 let client: LanguageClient | undefined;
@@ -55,9 +54,12 @@ function buildServerOptions(
     ...process.env,
     SAPPHIRE_LSP_LOG: logLevel,
   };
+  // Intentionally no `transport` field: in vscode-languageclient@9,
+  // `transport: TransportKind.stdio` appends `--stdio` to argv, but
+  // `sapphire-lsp` rejects any flag other than `--version` / `--help`
+  // and exits non-zero. Omitting `transport` keeps the default pipe.
   const runDebug = {
     command: serverPath,
-    transport: TransportKind.stdio,
     options: { env },
   };
   return { run: runDebug, debug: runDebug };
